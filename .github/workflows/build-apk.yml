@@ -12,6 +12,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repository
@@ -27,18 +28,94 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
       - name: Generate Android project
-        run: flutter create --platforms=android .
+        run: |
+          flutter --version
+          flutter create --org com.aduchat --project-name chat_adunka --platforms=android . 2>&1 | tee create.log
+          python3 tool/configure_android.py .
+
+      # Optional: a fixed signing key so every build has the same SHA
+      # fingerprints (needed for Firebase phone sign-in) and new APKs install
+      # over old ones. Without the secret, a temporary key is used.
+      - name: Install stable signing key (optional)
+        env:
+          ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$ANDROID_DEBUG_KEYSTORE_BASE64" ]; then
+            mkdir -p ~/.android
+            echo "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
+            echo "::notice title=Signing::Using the stable signing key from repository secrets."
+          else
+            echo "::warning title=Signing::ANDROID_DEBUG_KEYSTORE_BASE64 secret not set. This build uses a temporary signing key, so phone sign-in will not work and the APK cannot update an earlier install."
+          fi
+
+      # Firebase settings come from repository secrets and are never committed.
+      - name: Prepare Firebase settings
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+        run: |
+          python3 - <<'EOF'
+          import json, os
+          keys = ["FIREBASE_API_KEY", "FIREBASE_APP_ID", "FIREBASE_MESSAGING_SENDER_ID",
+                  "FIREBASE_PROJECT_ID", "FIREBASE_STORAGE_BUCKET"]
+          values = {k: os.environ.get(k, "") for k in keys}
+          with open(os.path.join(os.environ["RUNNER_TEMP"], "firebase_defines.json"), "w") as f:
+              json.dump(values, f)
+          missing = [k for k in keys[:4] if not values[k]]
+          if missing:
+              print("::warning title=Firebase::Not configured (missing secrets: " + ", ".join(missing) + "). The APK will show the setup screen instead of sign-in.")
+          else:
+              print("::notice title=Firebase::Firebase settings found for project " + values["FIREBASE_PROJECT_ID"] + ".")
+          EOF
 
       - name: Install dependencies
-        run: flutter pub get
+        run: flutter pub get 2>&1 | tee pubget.log; exit ${PIPESTATUS[0]}
+
+      - name: Analyze code
+        run: |
+          set +e
+          flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | tee analyze.log
+          code=${PIPESTATUS[0]}
+          python3 - <<'EOF'
+          t = open("analyze.log").read()[-20000:]
+          t = t.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
+          print("::notice title=flutter analyze::" + t)
+          EOF
+          exit $code
+
+      - name: Run tests
+        run: flutter test 2>&1 | tee test.log; exit ${PIPESTATUS[0]}
 
       - name: Build Android APK
-        run: flutter build apk --debug
+        run: flutter build apk --debug --dart-define-from-file="$RUNNER_TEMP/firebase_defines.json" 2>&1 | tee build.log; exit ${PIPESTATUS[0]}
+
+      - name: Show signing fingerprints
+        run: |
+          fp=$(keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android 2>/dev/null | grep -E "SHA1:|SHA256:" | sed 's/^[[:space:]]*//' | tr '\n' ' ')
+          echo "::notice title=SHA fingerprints (add these in Firebase)::$fp"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Chat-Aduunka-APK
           path: build/app/outputs/flutter-apk/app-debug.apk
+
+      # Logs are summarised as annotations so failures are visible from the
+      # run's summary page and the GitHub API.
+      - name: Report failure details
+        if: failure()
+        run: |
+          python3 - <<'EOF'
+          import os
+          for f in ["create.log", "pubget.log", "analyze.log", "test.log", "build.log"]:
+              if os.path.exists(f):
+                  t = open(f, errors="replace").read()[-12000:]
+                  t = t.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
+                  print(f"::error title={f}::{t}")
+          EOF
