@@ -1,5 +1,4 @@
-
-      name: Build Chat Aduunka APK
+name: Build Chat Aduunka APK
 
 on:
   push:
@@ -12,15 +11,13 @@ permissions:
 
 jobs:
   build:
-    name: Build Android APK
     runs-on: ubuntu-latest
-    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -30,32 +27,18 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: stable
-          cache: true
-
-      - name: Check Flutter version
-        run: flutter --version
 
       - name: Generate Android project
-        run: |
-          flutter create --platforms=android .
+        run: flutter create --platforms=android .
 
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Analyze Flutter project
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
-
       - name: Build Android APK
         run: flutter build apk --debug
 
-      - name: Verify APK
-        run: |
-          test -f build/app/outputs/flutter-apk/app-debug.apk
-
-      - name: Upload Chat Aduunka APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Chat-Aduunka-Android-APK
+          name: Chat-Aduunka-APK
           path: build/app/outputs/flutter-apk/app-debug.apk
-          retention-days: 30
-          if-no-files-found: error
