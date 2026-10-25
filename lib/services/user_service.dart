@@ -110,39 +110,43 @@ class UserService {
     final userRef = _users.doc(uid);
     final privateBefore = await getPrivate(uid);
 
-    await _step('users/$uid + usernames/$uname', () => _db.runTransaction((tx) async {
-      final current = await tx.get(userRef);
-      final oldUsername = current.data()?['username'] as String?;
-      if (uname != oldUsername) {
-        final claim = await tx.get(_db.collection('usernames').doc(uname));
-        if (claim.exists && claim.data()?['uid'] != uid) {
-          throw const UsernameTakenException();
-        }
-        tx.set(_db.collection('usernames').doc(uname), {
-          'uid': uid,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-        if (oldUsername != null && oldUsername.isNotEmpty) {
-          tx.delete(_db.collection('usernames').doc(oldUsername));
-        }
-      }
-      final data = <String, dynamic>{
-        'uid': uid,
-        'displayName': name,
-        'displayNameLower': name.toLowerCase(),
-        'username': uname,
-        'usernameLower': uname,
-        'about': about.trim(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
-      if (!current.exists) data['createdAt'] = FieldValue.serverTimestamp();
-      if (photoBase64 != null) {
-        data['photoBase64'] = photoBase64;
-      } else if (removePhoto) {
-        data['photoBase64'] = FieldValue.delete();
-      }
-      tx.set(userRef, data, SetOptions(merge: true));
-    }));
+    await _step(
+        'users/$uid + usernames/$uname',
+        () => _db.runTransaction((tx) async {
+              final current = await tx.get(userRef);
+              final oldUsername = current.data()?['username'] as String?;
+              if (uname != oldUsername) {
+                final claim =
+                    await tx.get(_db.collection('usernames').doc(uname));
+                if (claim.exists && claim.data()?['uid'] != uid) {
+                  throw const UsernameTakenException();
+                }
+                tx.set(_db.collection('usernames').doc(uname), {
+                  'uid': uid,
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
+                if (oldUsername != null && oldUsername.isNotEmpty) {
+                  tx.delete(_db.collection('usernames').doc(oldUsername));
+                }
+              }
+              final data = <String, dynamic>{
+                'uid': uid,
+                'displayName': name,
+                'displayNameLower': name.toLowerCase(),
+                'username': uname,
+                'usernameLower': uname,
+                'about': about.trim(),
+                'updatedAt': FieldValue.serverTimestamp(),
+              };
+              if (!current.exists)
+                data['createdAt'] = FieldValue.serverTimestamp();
+              if (photoBase64 != null) {
+                data['photoBase64'] = photoBase64;
+              } else if (removePhoto) {
+                data['photoBase64'] = FieldValue.delete();
+              }
+              tx.set(userRef, data, SetOptions(merge: true));
+            }));
 
     // Private account record (phone/email) and opt-in indexes.
     final private = AccountPrivate(
@@ -189,22 +193,26 @@ class UserService {
     if (phone != null && phone.isNotEmpty) {
       final ref = _db.collection('phoneIndex').doc(phone);
       if (p.discoverableByPhone) {
-        await _step('phoneIndex/$phone',
-            () => ref.set({'uid': uid, 'updatedAt': FieldValue.serverTimestamp()}));
+        await _step(
+            'phoneIndex/$phone',
+            () => ref
+                .set({'uid': uid, 'updatedAt': FieldValue.serverTimestamp()}));
       } else {
         await _ignoreErrors(ref.delete());
       }
     }
     final dir = _db.collection('directory').doc(uid);
     if (p.showInDirectory) {
-      await _step('directory/$uid', () => dir.set({
-        'uid': uid,
-        'displayName': name,
-        'displayNameLower': name.toLowerCase(),
-        'username': username,
-        'usernameLower': username,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }));
+      await _step(
+          'directory/$uid',
+          () => dir.set({
+                'uid': uid,
+                'displayName': name,
+                'displayNameLower': name.toLowerCase(),
+                'username': username,
+                'usernameLower': username,
+                'updatedAt': FieldValue.serverTimestamp(),
+              }));
     } else {
       await _ignoreErrors(dir.delete());
     }

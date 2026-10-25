@@ -136,7 +136,10 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         _error = outdated
             ? context.tr('err_rules_outdated')
             : '${context.tr('err_save_profile')}\n'
-                '${context.tr('err_save_step', {'step': e.step, 'code': e.code})}';
+                '${context.tr('err_save_step', {
+                    'step': e.step,
+                    'code': e.code
+                  })}';
       });
     } catch (e) {
       if (!mounted) return;

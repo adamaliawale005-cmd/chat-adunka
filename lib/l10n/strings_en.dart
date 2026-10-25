@@ -106,7 +106,8 @@ const Map<String, String> stringsEn = {
   "err_network": "No internet connection. Check your network and try again.",
   "err_passwords_differ": "The passwords do not match.",
   "err_recent_login": "Please sign out and sign in again, then try once more.",
-  "err_rules_outdated": "Your Firebase database rules are out of date, so the profile cannot be saved. The app owner must publish the current firestore.rules in the Firebase console (Firestore Database > Rules > Publish).",
+  "err_rules_outdated":
+      "Your Firebase database rules are out of date, so the profile cannot be saved. The app owner must publish the current firestore.rules in the Firebase console (Firestore Database > Rules > Publish).",
   "err_save_step": "Refused: {step} ({code})",
   "err_save_profile": "Your profile could not be saved.",
   "err_sign_in_method_disabled":

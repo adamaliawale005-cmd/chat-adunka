@@ -105,7 +105,8 @@ const Map<String, String> stringsSo = {
   "err_network": "Internet ma jiro. Hubi shabakaddaada oo isku day mar kale.",
   "err_passwords_differ": "Furayaasha sirta isma eka.",
   "err_recent_login": "Fadlan ka bax oo dib u gal, kadibna mar kale isku day.",
-  "err_rules_outdated": "Xeerarka kaydka Firebase waa duugoobeen, sidaa darteed astaanta lama kaydin karo. Milkiilaha app-ku waa inuu ku daabaco firestore.rules-ka cusub Firebase console (Firestore Database > Rules > Publish).",
+  "err_rules_outdated":
+      "Xeerarka kaydka Firebase waa duugoobeen, sidaa darteed astaanta lama kaydin karo. Milkiilaha app-ku waa inuu ku daabaco firestore.rules-ka cusub Firebase console (Firestore Database > Rules > Publish).",
   "err_save_step": "La diiday: {step} ({code})",
   "err_save_profile": "Astaantaada lama kaydin karin.",
   "err_sign_in_method_disabled": "Habkan gelitaanka laguma furin Firebase.",
