@@ -107,7 +107,7 @@ const Map<String, String> stringsEn = {
   "err_passwords_differ": "The passwords do not match.",
   "err_recent_login": "Please sign out and sign in again, then try once more.",
   "err_rules_outdated":
-      "Your Firebase database rules are out of date, so the profile cannot be saved. The app owner must publish the current firestore.rules in the Firebase console (Firestore Database > Rules > Publish).",
+      "Your Firebase database rules are out of date, so the profile cannot be saved. This app is connected to Firebase project \"{project}\" (it should be aduchat-c4ee6). Publish the current firestore.rules there (Firestore Database > Rules > Publish), or fix the FIREBASE_PROJECT_ID secret and rebuild.",
   "err_save_step": "Refused: {step} ({code})",
   "err_save_profile": "Your profile could not be saved.",
   "err_sign_in_method_disabled":

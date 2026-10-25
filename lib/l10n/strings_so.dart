@@ -106,7 +106,7 @@ const Map<String, String> stringsSo = {
   "err_passwords_differ": "Furayaasha sirta isma eka.",
   "err_recent_login": "Fadlan ka bax oo dib u gal, kadibna mar kale isku day.",
   "err_rules_outdated":
-      "Xeerarka kaydka Firebase waa duugoobeen, sidaa darteed astaanta lama kaydin karo. Milkiilaha app-ku waa inuu ku daabaco firestore.rules-ka cusub Firebase console (Firestore Database > Rules > Publish).",
+      "Xeerarka kaydka Firebase waa duugoobeen, sidaa darteed astaanta lama kaydin karo. App-kan wuxuu ku xiran yahay mashruuca Firebase \"{project}\" (waa inuu ahaadaa aduchat-c4ee6). Halkaas ku daabac firestore.rules-ka cusub (Firestore Database > Rules > Publish), ama sax sirta FIREBASE_PROJECT_ID oo dib u dhis.",
   "err_save_step": "La diiday: {step} ({code})",
   "err_save_profile": "Astaantaada lama kaydin karin.",
   "err_sign_in_method_disabled": "Habkan gelitaanka laguma furin Firebase.",

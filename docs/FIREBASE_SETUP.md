@@ -163,3 +163,18 @@ extracted. For production, use short-lived credentials issued by a server
 | `STORAGE_ENABLED` | `false` | `true` enables videos/documents and stores photos/voice in Storage |
 | `EMAIL_AUTH_ENABLED` | `true` | Shows email/password sign-in |
 | `PHONE_AUTH_ENABLED` | `true` | Shows phone/SMS sign-in |
+
+## Troubleshooting: "permission-denied" when saving the profile
+
+1. **Wrong Firebase project.** The CI step *Validate Firebase configuration*
+   stops the build if `FIREBASE_PROJECT_ID` is not `aduchat-c4ee6`, if
+   `FIREBASE_APP_ID` is not an **Android** app id, or if the App ID and
+   Sender ID come from different projects. Copy all four values from the
+   **same** `google-services.json`, downloaded from project `aduchat-c4ee6`
+   for package `com.aduchat.chat_adunka`. Paste them without quotes.
+2. **Rules not published.** Paste the current `firestore.rules` into
+   Firestore Database > Rules and click Publish. The app tells you when the
+   published rules are older than it expects, and names the connected
+   project.
+3. On the phone, the error message names the document that was refused,
+   e.g. `Refused: users/<uid> + usernames/<name> (permission-denied)`.

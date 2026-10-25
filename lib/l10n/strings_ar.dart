@@ -108,7 +108,7 @@ const Map<String, String> stringsAr = {
   "err_recent_login":
       "يُرجى تسجيل الخروج ثم الدخول مجددًا، ثم المحاولة مرة أخرى.",
   "err_rules_outdated":
-      "قواعد قاعدة بيانات Firebase قديمة، لذا لا يمكن حفظ الملف الشخصي. يجب على مالك التطبيق نشر ملف firestore.rules الحالي في وحدة تحكم Firebase (Firestore Database > Rules > Publish).",
+      "قواعد قاعدة بيانات Firebase قديمة، لذا لا يمكن حفظ الملف الشخصي. هذا التطبيق متصل بمشروع Firebase \"{project}\" (يجب أن يكون aduchat-c4ee6). انشر ملف firestore.rules الحالي هناك (Firestore Database > Rules > Publish)، أو صحّح السر FIREBASE_PROJECT_ID وأعد البناء.",
   "err_save_step": "مرفوض: {step} ({code})",
   "err_save_profile": "تعذّر حفظ ملفك الشخصي.",
   "err_sign_in_method_disabled":
