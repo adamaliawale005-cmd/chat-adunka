@@ -39,7 +39,8 @@ class _ChatsTabState extends State<ChatsTab> {
             message: context.tr('chats_load_failed'),
             details: '${snap.error}',
             retryLabel: context.tr('retry'),
-            onRetry: () => setState(() => _chats = ChatService.instance.watchChats(widget.me)),
+            onRetry: () => setState(
+                () => _chats = ChatService.instance.watchChats(widget.me)),
           );
         }
         if (!snap.hasData) return const LoadingView();
@@ -54,7 +55,10 @@ class _ChatsTabState extends State<ChatsTab> {
         return ValueListenableBuilder<Set<String>>(
           valueListenable: Session.blocked,
           builder: (context, blocked, _) {
-            final visible = chats.where((c) => c.isGroup || !blocked.contains(c.otherMember(widget.me))).toList();
+            final visible = chats
+                .where((c) =>
+                    c.isGroup || !blocked.contains(c.otherMember(widget.me)))
+                .toList();
             return Column(
               children: [
                 if (chats.length > 6)
@@ -67,14 +71,17 @@ class _ChatsTabState extends State<ChatsTab> {
                         prefixIcon: const Icon(Icons.search),
                         hintText: context.tr('search_chats'),
                       ),
-                      onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
+                      onChanged: (v) =>
+                          setState(() => _query = v.trim().toLowerCase()),
                     ),
                   ),
                 Expanded(
                   child: ListView.separated(
                     itemCount: visible.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1, indent: 80),
-                    itemBuilder: (context, i) => _ChatTile(me: widget.me, chat: visible[i], query: _query),
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, indent: 80),
+                    itemBuilder: (context, i) => _ChatTile(
+                        me: widget.me, chat: visible[i], query: _query),
                   ),
                 ),
               ],
@@ -103,38 +110,53 @@ class _ChatTile extends StatelessWidget {
     if (typing.isNotEmpty) {
       subtitle = Text(
         context.tr('typing'),
-        style: TextStyle(color: theme.colorScheme.primary, fontStyle: FontStyle.italic),
+        style: TextStyle(
+            color: theme.colorScheme.primary, fontStyle: FontStyle.italic),
       );
     } else {
-      final preview = chat.lastMessageType == 'system' && chat.lastMessage.isEmpty
-          ? context.tr('group_created_preview')
-          : chat.lastMessage;
-      final prefix = chat.lastSenderId == me && chat.lastMessage.isNotEmpty ? '${context.tr('you')}: ' : '';
-      if (chat.isGroup && prefix.isEmpty && chat.lastSenderId.isNotEmpty && chat.lastMessageType != 'system') {
+      final preview =
+          chat.lastMessageType == 'system' && chat.lastMessage.isEmpty
+              ? context.tr('group_created_preview')
+              : chat.lastMessage;
+      final prefix = chat.lastSenderId == me && chat.lastMessage.isNotEmpty
+          ? '${context.tr('you')}: '
+          : '';
+      if (chat.isGroup &&
+          prefix.isEmpty &&
+          chat.lastSenderId.isNotEmpty &&
+          chat.lastMessageType != 'system') {
         subtitle = Row(children: [
           Flexible(
             child: UserName(
               uid: chat.lastSenderId,
               deletedLabel: context.tr('deleted_account'),
               format: (u) => '${u.displayName}: ',
-              style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
           ),
-          Expanded(flex: 3, child: Text(preview, maxLines: 1, overflow: TextOverflow.ellipsis)),
+          Expanded(
+              flex: 3,
+              child:
+                  Text(preview, maxLines: 1, overflow: TextOverflow.ellipsis)),
         ]);
       } else {
-        subtitle = Text('$prefix$preview', maxLines: 1, overflow: TextOverflow.ellipsis);
+        subtitle = Text('$prefix$preview',
+            maxLines: 1, overflow: TextOverflow.ellipsis);
       }
     }
 
     final title = chat.isGroup
         ? Text(chat.name, maxLines: 1, overflow: TextOverflow.ellipsis)
-        : UserName(uid: chat.otherMember(me), deletedLabel: context.tr('deleted_account'));
+        : UserName(
+            uid: chat.otherMember(me),
+            deletedLabel: context.tr('deleted_account'));
 
     final tile = ListTile(
       leading: ChatAvatar(chat: chat, me: me, radius: 26),
       title: DefaultTextStyle.merge(
-        style: TextStyle(fontWeight: unread > 0 ? FontWeight.w700 : FontWeight.w500),
+        style: TextStyle(
+            fontWeight: unread > 0 ? FontWeight.w700 : FontWeight.w500),
         child: title,
       ),
       subtitle: subtitle,
@@ -164,7 +186,10 @@ class _ChatTile extends StatelessWidget {
 
     if (query.isEmpty) return tile;
     // Filter by name; direct chat names are resolved from the profile.
-    if (chat.isGroup) return chat.name.toLowerCase().contains(query) ? tile : const SizedBox.shrink();
+    if (chat.isGroup)
+      return chat.name.toLowerCase().contains(query)
+          ? tile
+          : const SizedBox.shrink();
     return _NameFilter(uid: chat.otherMember(me), query: query, child: tile);
   }
 }
@@ -173,7 +198,8 @@ class _NameFilter extends StatelessWidget {
   final String uid;
   final String query;
   final Widget child;
-  const _NameFilter({required this.uid, required this.query, required this.child});
+  const _NameFilter(
+      {required this.uid, required this.query, required this.child});
 
   @override
   Widget build(BuildContext context) {

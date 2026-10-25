@@ -98,6 +98,11 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
+      - name: Check Cloud Functions source
+        run: |
+          mkdir -p ci-logs
+          node --check functions/index.js 2>&1 | tee ci-logs/functions-check.log
+          exit ${PIPESTATUS[0]}
       - name: Run rules tests in the Firebase emulator
         working-directory: firebase-tests
         run: |

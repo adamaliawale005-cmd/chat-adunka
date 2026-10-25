@@ -109,13 +109,15 @@ class BlockedUsersScreen extends StatelessWidget {
         valueListenable: Session.blocked,
         builder: (context, blocked, _) {
           if (blocked.isEmpty) {
-            return EmptyState(icon: Icons.block, title: context.tr('no_blocked_users'));
+            return EmptyState(
+                icon: Icons.block, title: context.tr('no_blocked_users'));
           }
           return ListView(children: [
             for (final uid in blocked)
               ListTile(
                 leading: UserAvatar(uid: uid),
-                title: UserName(uid: uid, deletedLabel: context.tr('deleted_account')),
+                title: UserName(
+                    uid: uid, deletedLabel: context.tr('deleted_account')),
                 trailing: TextButton(
                   onPressed: () => UserService.instance.unblock(me, uid),
                   child: Text(context.tr('unblock')),

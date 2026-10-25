@@ -37,7 +37,8 @@ class _UserPickerScreenState extends State<UserPickerScreen> {
   final _search = TextEditingController();
   Timer? _debounce;
   List<String>? _results;
-  late final Stream<List<Chat>> _chats = ChatService.instance.watchChats(widget.me);
+  late final Stream<List<Chat>> _chats =
+      ChatService.instance.watchChats(widget.me);
 
   @override
   void dispose() {
@@ -67,7 +68,8 @@ class _UserPickerScreenState extends State<UserPickerScreen> {
         if (u != null && !u.hasProfile) return const SizedBox.shrink();
         return CheckboxListTile(
           value: _selected.contains(uid),
-          onChanged: (v) => setState(() => v == true ? _selected.add(uid) : _selected.remove(uid)),
+          onChanged: (v) => setState(
+              () => v == true ? _selected.add(uid) : _selected.remove(uid)),
           secondary: UserAvatar(uid: uid),
           title: Text(u?.displayName ?? ''),
           subtitle: u?.username == null ? null : Text('@${u!.username}'),
@@ -79,7 +81,10 @@ class _UserPickerScreenState extends State<UserPickerScreen> {
   @override
   Widget build(BuildContext context) {
     final blocked = Session.blocked.value;
-    bool allowed(String uid) => uid != widget.me && !widget.exclude.contains(uid) && !blocked.contains(uid);
+    bool allowed(String uid) =>
+        uid != widget.me &&
+        !widget.exclude.contains(uid) &&
+        !blocked.contains(uid);
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
       floatingActionButton: _selected.isEmpty
@@ -105,8 +110,12 @@ class _UserPickerScreenState extends State<UserPickerScreen> {
         Expanded(
           child: _results != null
               ? (_results!.where(allowed).isEmpty
-                  ? EmptyState(icon: Icons.person_search_outlined, title: context.tr('no_people_found'))
-                  : ListView(children: [for (final uid in _results!.where(allowed)) _tile(uid)]))
+                  ? EmptyState(
+                      icon: Icons.person_search_outlined,
+                      title: context.tr('no_people_found'))
+                  : ListView(children: [
+                      for (final uid in _results!.where(allowed)) _tile(uid)
+                    ]))
               : StreamBuilder<List<Chat>>(
                   stream: _chats,
                   builder: (context, snap) {
@@ -123,7 +132,8 @@ class _UserPickerScreenState extends State<UserPickerScreen> {
                         message: context.tr('picker_empty_message'),
                       );
                     }
-                    return ListView(children: [for (final uid in ids) _tile(uid)]);
+                    return ListView(
+                        children: [for (final uid in ids) _tile(uid)]);
                   },
                 ),
         ),

@@ -30,7 +30,8 @@ class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key, required this.me, required this.chat});
 
   /// Opens (or starts) a direct chat with [other].
-  static Future<void> openDirect(BuildContext context, String me, String other) {
+  static Future<void> openDirect(
+      BuildContext context, String me, String other) {
     return Navigator.of(context).push(MaterialPageRoute(
       builder: (_) => ChatScreen(me: me, chat: Chat.direct(me, other)),
     ));
@@ -95,7 +96,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       if (m.senderId == me || m.isSystem || !m.fromServer) return false;
       final key = '${m.id}:${m.status.name}:${m.readBy.length}';
       if (_readRequested.contains(key)) return false;
-      final needs = _chat.isGroup ? (readReceipts && !m.readBy.contains(me)) : m.status != MessageStatus.read;
+      final needs = _chat.isGroup
+          ? (readReceipts && !m.readBy.contains(me))
+          : m.status != MessageStatus.read;
       if (needs) _readRequested.add(key);
       return needs;
     }).toList();
@@ -126,7 +129,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
     final reply = _replyTo;
     setState(() => _replyTo = null);
-    await ChatService.instance.sendText(chat: _chat, senderId: me, text: text, replyTo: reply);
+    await ChatService.instance
+        .sendText(chat: _chat, senderId: me, text: text, replyTo: reply);
   }
 
   Future<void> _messageMenu(ChatMessage m) async {
@@ -139,13 +143,25 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       builder: (ctx) => SafeArea(
         child: Wrap(children: [
           if (!m.deleted && _chat.canSend(me))
-            ListTile(leading: const Icon(Icons.reply), title: Text(ctx.tr('reply')), onTap: () => Navigator.pop(ctx, 'reply')),
+            ListTile(
+                leading: const Icon(Icons.reply),
+                title: Text(ctx.tr('reply')),
+                onTap: () => Navigator.pop(ctx, 'reply')),
           if (!m.deleted && m.text.isNotEmpty)
-            ListTile(leading: const Icon(Icons.copy), title: Text(ctx.tr('copy')), onTap: () => Navigator.pop(ctx, 'copy')),
+            ListTile(
+                leading: const Icon(Icons.copy),
+                title: Text(ctx.tr('copy')),
+                onTap: () => Navigator.pop(ctx, 'copy')),
           if (!m.deleted)
-            ListTile(leading: const Icon(Icons.shortcut), title: Text(ctx.tr('forward')), onTap: () => Navigator.pop(ctx, 'forward')),
+            ListTile(
+                leading: const Icon(Icons.shortcut),
+                title: Text(ctx.tr('forward')),
+                onTap: () => Navigator.pop(ctx, 'forward')),
           if (ChatService.canEdit(m, me))
-            ListTile(leading: const Icon(Icons.edit), title: Text(ctx.tr('edit')), onTap: () => Navigator.pop(ctx, 'edit')),
+            ListTile(
+                leading: const Icon(Icons.edit),
+                title: Text(ctx.tr('edit')),
+                onTap: () => Navigator.pop(ctx, 'edit')),
           ListTile(
             leading: const Icon(Icons.delete_outline),
             title: Text(ctx.tr('delete_for_me')),
@@ -204,7 +220,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           if (ok) await ChatService.instance.deleteForEveryone(m);
           break;
         case 'report':
-          await showReportDialog(context, reporter: me, reported: m.senderId, chatId: _chat.id, messageId: m.id);
+          await showReportDialog(context,
+              reporter: me,
+              reported: m.senderId,
+              chatId: _chat.id,
+              messageId: m.id);
           break;
       }
     } catch (e) {
@@ -235,10 +255,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   void _openInfo() {
     if (_chat.isGroup) {
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => GroupInfoScreen(me: me, chatId: _chat.id)));
+      Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => GroupInfoScreen(me: me, chatId: _chat.id)));
     } else {
       Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => UserProfileScreen(me: me, uid: _chat.otherMember(me), fromChat: true),
+        builder: (_) => UserProfileScreen(
+            me: me, uid: _chat.otherMember(me), fromChat: true),
       ));
     }
   }
@@ -262,10 +284,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               initialData: UserService.instance.cachedUser(other),
               builder: (context, snap) {
                 final u = snap.data;
-                if (u == null || !u.hasProfile || blocked) return const SizedBox.shrink();
+                if (u == null || !u.hasProfile || blocked)
+                  return const SizedBox.shrink();
                 if (u.isOnlineNow) return Text(context.tr('online'));
                 if (u.lastSeen == null) return const SizedBox.shrink();
-                return Text(formatLastSeen(u.lastSeen, context.tr, locale), maxLines: 1, overflow: TextOverflow.ellipsis);
+                return Text(formatLastSeen(u.lastSeen, context.tr, locale),
+                    maxLines: 1, overflow: TextOverflow.ellipsis);
               },
             );
     }
@@ -282,19 +306,26 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               mainAxisSize: MainAxisSize.min,
               children: [
                 _chat.isGroup
-                    ? Text(_chat.name, maxLines: 1, overflow: TextOverflow.ellipsis)
+                    ? Text(_chat.name,
+                        maxLines: 1, overflow: TextOverflow.ellipsis)
                     : StreamBuilder<AppUser>(
-                        stream: UserService.instance.watchUser(_chat.otherMember(me)),
-                        initialData: UserService.instance.cachedUser(_chat.otherMember(me)),
+                        stream: UserService.instance
+                            .watchUser(_chat.otherMember(me)),
+                        initialData: UserService.instance
+                            .cachedUser(_chat.otherMember(me)),
                         builder: (context, snap) => Text(
                           snap.data == null
                               ? ''
-                              : (snap.data!.hasProfile ? snap.data!.displayName : context.tr('deleted_account')),
+                              : (snap.data!.hasProfile
+                                  ? snap.data!.displayName
+                                  : context.tr('deleted_account')),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                DefaultTextStyle.merge(style: const TextStyle(fontSize: 12, color: Colors.white70), child: subtitle),
+                DefaultTextStyle.merge(
+                    style: const TextStyle(fontSize: 12, color: Colors.white70),
+                    child: subtitle),
               ],
             ),
           ),
@@ -305,12 +336,14 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           IconButton(
             tooltip: context.tr('video_call'),
             icon: const Icon(Icons.videocam_outlined),
-            onPressed: () => startCall(context, me: me, peer: _chat.otherMember(me), kind: CallKind.video),
+            onPressed: () => startCall(context,
+                me: me, peer: _chat.otherMember(me), kind: CallKind.video),
           ),
           IconButton(
             tooltip: context.tr('voice_call'),
             icon: const Icon(Icons.call_outlined),
-            onPressed: () => startCall(context, me: me, peer: _chat.otherMember(me), kind: CallKind.audio),
+            onPressed: () => startCall(context,
+                me: me, peer: _chat.otherMember(me), kind: CallKind.audio),
           ),
         ],
         PopupMenuButton<String>(
@@ -328,22 +361,33 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 _toggleBlock(blocked);
                 break;
               case 'report':
-                showReportDialog(context, reporter: me, reported: _chat.otherMember(me), chatId: _chat.id);
+                showReportDialog(context,
+                    reporter: me,
+                    reported: _chat.otherMember(me),
+                    chatId: _chat.id);
                 break;
             }
           },
           itemBuilder: (ctx) => [
-            PopupMenuItem(value: 'info', child: Text(ctx.tr(_chat.isGroup ? 'group_info' : 'view_profile'))),
+            PopupMenuItem(
+                value: 'info',
+                child: Text(
+                    ctx.tr(_chat.isGroup ? 'group_info' : 'view_profile'))),
             PopupMenuItem(value: 'search', child: Text(ctx.tr('search'))),
-            if (!_chat.isGroup) PopupMenuItem(value: 'block', child: Text(ctx.tr(blocked ? 'unblock' : 'block'))),
-            if (!_chat.isGroup) PopupMenuItem(value: 'report', child: Text(ctx.tr('report'))),
+            if (!_chat.isGroup)
+              PopupMenuItem(
+                  value: 'block',
+                  child: Text(ctx.tr(blocked ? 'unblock' : 'block'))),
+            if (!_chat.isGroup)
+              PopupMenuItem(value: 'report', child: Text(ctx.tr('report'))),
           ],
         ),
       ],
     );
   }
 
-  Widget _banner(String text, {VoidCallback? onTap, String? actionLabel}) => Material(
+  Widget _banner(String text, {VoidCallback? onTap, String? actionLabel}) =>
+      Material(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         child: SafeArea(
           top: false,
@@ -351,7 +395,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             padding: const EdgeInsets.all(14),
             child: Row(children: [
               Expanded(child: Text(text, textAlign: TextAlign.center)),
-              if (onTap != null) TextButton(onPressed: onTap, child: Text(actionLabel ?? '')),
+              if (onTap != null)
+                TextButton(onPressed: onTap, child: Text(actionLabel ?? '')),
             ]),
           ),
         ),
@@ -362,7 +407,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     return ValueListenableBuilder<Set<String>>(
       valueListenable: Session.blocked,
       builder: (context, blockedSet, _) {
-        final blocked = !_chat.isGroup && blockedSet.contains(_chat.otherMember(me));
+        final blocked =
+            !_chat.isGroup && blockedSet.contains(_chat.otherMember(me));
         final notMember = _chat.isGroup && !_chat.members.contains(me);
         return Scaffold(
           backgroundColor: context.chatColors.chatBackground,
@@ -371,7 +417,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             children: [
               Expanded(child: _messageList()),
               if (blocked)
-                _banner(context.tr('you_blocked_contact'), onTap: () => _toggleBlock(true), actionLabel: context.tr('unblock'))
+                _banner(context.tr('you_blocked_contact'),
+                    onTap: () => _toggleBlock(true),
+                    actionLabel: context.tr('unblock'))
               else if (notMember)
                 _banner(context.tr('not_a_member'))
               else if (!_chat.canSend(me))
@@ -386,7 +434,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   onCancelReply: () => setState(() => _replyTo = null),
                   onCancelEdit: () => setState(() => _editing = null),
                   onSendText: _onSendText,
-                  onTyping: (t) => ChatService.instance.setTyping(_chat.id, me, t),
+                  onTyping: (t) =>
+                      ChatService.instance.setTyping(_chat.id, me, t),
                 ),
             ],
           ),
@@ -401,7 +450,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       stream: _messages,
       builder: (context, snap) {
         if (snap.hasError && _last.isEmpty) {
-          return ErrorView(message: context.tr('messages_load_failed'), details: '${snap.error}');
+          return ErrorView(
+              message: context.tr('messages_load_failed'),
+              details: '${snap.error}');
         }
         if (snap.hasData) {
           _last = snap.data!;
@@ -420,31 +471,44 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 .reversed
                 .toList();
             if (messages.isEmpty && outgoing.isEmpty) {
-              return EmptyState(icon: Icons.waving_hand_outlined, title: context.tr('say_hello'));
+              return EmptyState(
+                  icon: Icons.waving_hand_outlined,
+                  title: context.tr('say_hello'));
             }
             final total = outgoing.length + messages.length;
             return NotificationListener<ScrollNotification>(
               onNotification: (n) {
-                if (n.metrics.pixels > n.metrics.maxScrollExtent - 400) _loadMore();
+                if (n.metrics.pixels > n.metrics.maxScrollExtent - 400)
+                  _loadMore();
                 return false;
               },
               child: ListView.builder(
                 reverse: true,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                 itemCount: total,
                 itemBuilder: (context, i) {
-                  if (i < outgoing.length) return OutgoingBubble(item: outgoing[i]);
+                  if (i < outgoing.length)
+                    return OutgoingBubble(item: outgoing[i]);
                   final idx = i - outgoing.length;
                   final m = messages[idx];
-                  final older = idx + 1 < messages.length ? messages[idx + 1] : null;
-                  final showDay = older == null || dayKey(older.createdAt) != dayKey(m.createdAt);
+                  final older =
+                      idx + 1 < messages.length ? messages[idx + 1] : null;
+                  final showDay = older == null ||
+                      dayKey(older.createdAt) != dayKey(m.createdAt);
                   final showSender = _chat.isGroup &&
                       m.senderId != me &&
                       !m.isSystem &&
-                      (older == null || older.senderId != m.senderId || older.isSystem || showDay);
+                      (older == null ||
+                          older.senderId != m.senderId ||
+                          older.isSystem ||
+                          showDay);
                   return Column(
                     children: [
-                      if (showDay) DayChip(label: formatDayHeader(m.createdAt, context.tr, locale)),
+                      if (showDay)
+                        DayChip(
+                            label: formatDayHeader(
+                                m.createdAt, context.tr, locale)),
                       MessageBubble(
                         key: ValueKey(m.id),
                         message: m,
@@ -452,12 +516,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         me: me,
                         showSender: showSender,
                         onLongPress: () => _messageMenu(m),
-                        onSwipeReply: _chat.canSend(me) && !m.deleted && !m.isSystem
-                            ? () => setState(() {
-                                  _editing = null;
-                                  _replyTo = _replyFor(m);
-                                })
-                            : null,
+                        onSwipeReply:
+                            _chat.canSend(me) && !m.deleted && !m.isSystem
+                                ? () => setState(() {
+                                      _editing = null;
+                                      _replyTo = _replyFor(m);
+                                    })
+                                : null,
                       ),
                     ],
                   );

@@ -8,7 +8,14 @@ import 'package:permission_handler/permission_handler.dart';
 import '../config/app_config.dart';
 import '../models/call_models.dart';
 
-enum CallPhase { outgoing, incoming, connecting, connected, reconnecting, ended }
+enum CallPhase {
+  outgoing,
+  incoming,
+  connecting,
+  connected,
+  reconnecting,
+  ended
+}
 
 class CallPermissionDenied implements Exception {
   final bool permanently;
@@ -60,8 +67,9 @@ class ActiveCall extends ChangeNotifier {
   bool get isVideo => kind == CallKind.video;
   bool get isOver => _phase == CallPhase.ended;
 
-  Duration get duration =>
-      connectedAt == null ? Duration.zero : DateTime.now().difference(connectedAt!);
+  Duration get duration => connectedAt == null
+      ? Duration.zero
+      : DateTime.now().difference(connectedAt!);
 
   void setPhase(CallPhase p) {
     if (_phase == CallPhase.ended) return;
@@ -102,7 +110,8 @@ class CallService {
   static final CallService instance = CallService._();
 
   FirebaseFirestore get _db => FirebaseFirestore.instance;
-  CollectionReference<Map<String, dynamic>> get _calls => _db.collection('calls');
+  CollectionReference<Map<String, dynamic>> get _calls =>
+      _db.collection('calls');
   DocumentReference<Map<String, dynamic>> _history(String uid, String callId) =>
       _db.collection('users').doc(uid).collection('calls').doc(callId);
 
@@ -156,10 +165,14 @@ class CallService {
         final call = CallDoc.fromDoc(change.doc);
         if (_seenIncoming.contains(call.id)) continue;
         final created = call.createdAt;
-        if (created != null && DateTime.now().difference(created).inSeconds.abs() > 60) continue;
+        if (created != null &&
+            DateTime.now().difference(created).inSeconds.abs() > 60) continue;
         _seenIncoming.add(call.id);
         if (active.value != null && !active.value!.isOver) {
-          _calls.doc(call.id).update({'status': 'busy', 'updatedAt': FieldValue.serverTimestamp()}).catchError((_) {});
+          _calls.doc(call.id).update({
+            'status': 'busy',
+            'updatedAt': FieldValue.serverTimestamp()
+          }).catchError((_) {});
           continue;
         }
         _watchUnanswered(call, me);
@@ -184,8 +197,10 @@ class CallService {
     }, onError: (_) => sub.cancel());
   }
 
-  Stream<CallDoc?> watchCall(String callId) =>
-      _calls.doc(callId).snapshots().map((d) => d.exists ? CallDoc.fromDoc(d) : null);
+  Stream<CallDoc?> watchCall(String callId) => _calls
+      .doc(callId)
+      .snapshots()
+      .map((d) => d.exists ? CallDoc.fromDoc(d) : null);
 
   Stream<List<CallLogEntry>> watchHistory(String me) => _db
       .collection('users')
@@ -208,20 +223,26 @@ class CallService {
     } catch (_) {}
   }
 
-  Future<void> deleteHistoryEntry(String me, String callId) => _history(me, callId).delete();
+  Future<void> deleteHistoryEntry(String me, String callId) =>
+      _history(me, callId).delete();
 
   // ---------- permissions & media ----------
 
   Future<void> _ensurePermissions(CallKind kind) async {
-    final perms = [Permission.microphone, if (kind == CallKind.video) Permission.camera];
+    final perms = [
+      Permission.microphone,
+      if (kind == CallKind.video) Permission.camera
+    ];
     final result = await perms.request();
     final denied = result.values.where((s) => !s.isGranted).toList();
     if (denied.isNotEmpty) {
-      throw CallPermissionDenied(permanently: denied.any((s) => s.isPermanentlyDenied));
+      throw CallPermissionDenied(
+          permanently: denied.any((s) => s.isPermanentlyDenied));
     }
   }
 
-  Future<MediaStream> _openMedia(CallKind kind) => navigator.mediaDevices.getUserMedia({
+  Future<MediaStream> _openMedia(CallKind kind) =>
+      navigator.mediaDevices.getUserMedia({
         'audio': true,
         'video': kind == CallKind.video
             ? {
@@ -318,13 +339,15 @@ class CallService {
         _restarts = 0;
         call.setPhase(CallPhase.connected);
         if (call.outgoing) {
-          _history(call.me, call.callId).update({'status': 'answered'}).catchError((_) {});
+          _history(call.me, call.callId)
+              .update({'status': 'answered'}).catchError((_) {});
         }
         break;
       case RTCIceConnectionState.RTCIceConnectionStateDisconnected:
         if (call.connectedAt != null) call.setPhase(CallPhase.reconnecting);
         _reconnectTimer?.cancel();
-        _reconnectTimer = Timer(const Duration(seconds: 5), () => _restartIce(call));
+        _reconnectTimer =
+            Timer(const Duration(seconds: 5), () => _restartIce(call));
         break;
       case RTCIceConnectionState.RTCIceConnectionStateFailed:
         if (call.connectedAt != null) call.setPhase(CallPhase.reconnecting);
@@ -360,8 +383,12 @@ class CallService {
 
   // ---------- outgoing ----------
 
-  Future<ActiveCall> startCall({required String me, required String peer, required CallKind kind}) async {
-    if (active.value != null && !active.value!.isOver) throw const CallBusyException();
+  Future<ActiveCall> startCall(
+      {required String me,
+      required String peer,
+      required CallKind kind}) async {
+    if (active.value != null && !active.value!.isOver)
+      throw const CallBusyException();
     await _ensurePermissions(kind);
     _reset();
     final ref = _calls.doc();
@@ -426,7 +453,10 @@ class CallService {
       await batch.commit();
       _flushLocalCandidates(call);
       _listenRemoteCandidates(call);
-      _docSub = _calls.doc(ref.id).snapshots().listen((d) => _onCallerDoc(call, d), onError: (_) {});
+      _docSub = _calls
+          .doc(ref.id)
+          .snapshots()
+          .listen((d) => _onCallerDoc(call, d), onError: (_) {});
       _ringTimer = Timer(AppConfig.ringTimeout, () {
         if (call.phase == CallPhase.outgoing) hangUp(reason: 'no_answer');
       });
@@ -437,7 +467,8 @@ class CallService {
     return call;
   }
 
-  Future<void> _onCallerDoc(ActiveCall call, DocumentSnapshot<Map<String, dynamic>> d) async {
+  Future<void> _onCallerDoc(
+      ActiveCall call, DocumentSnapshot<Map<String, dynamic>> d) async {
     if (!d.exists || call.isOver) return;
     final doc = CallDoc.fromDoc(d);
     if (doc.answer != null && doc.answerVersion > _appliedAnswer) {
@@ -464,7 +495,8 @@ class CallService {
   // ---------- answering ----------
 
   Future<ActiveCall> accept(CallDoc incoming, String me) async {
-    if (active.value != null && !active.value!.isOver) throw const CallBusyException();
+    if (active.value != null && !active.value!.isOver)
+      throw const CallBusyException();
     await _ensurePermissions(incoming.kind);
     _reset();
     final call = ActiveCall(
@@ -512,7 +544,10 @@ class CallService {
         'seen': true,
         'answeredAt': FieldValue.serverTimestamp(),
       }).catchError((_) {});
-      _docSub = _calls.doc(incoming.id).snapshots().listen((d) => _onCalleeDoc(call, d), onError: (_) {});
+      _docSub = _calls
+          .doc(incoming.id)
+          .snapshots()
+          .listen((d) => _onCalleeDoc(call, d), onError: (_) {});
     } catch (e) {
       await _finish(call, 'failed');
       rethrow;
@@ -520,7 +555,8 @@ class CallService {
     return call;
   }
 
-  Future<void> _onCalleeDoc(ActiveCall call, DocumentSnapshot<Map<String, dynamic>> d) async {
+  Future<void> _onCalleeDoc(
+      ActiveCall call, DocumentSnapshot<Map<String, dynamic>> d) async {
     if (!d.exists || call.isOver) return;
     final doc = CallDoc.fromDoc(d);
     // ICE restart requested by the caller.
@@ -551,7 +587,8 @@ class CallService {
         'endedBy': me,
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      await _history(me, incoming.id).update({'status': 'rejected', 'seen': true});
+      await _history(me, incoming.id)
+          .update({'status': 'rejected', 'seen': true});
     } catch (_) {}
   }
 
@@ -561,7 +598,8 @@ class CallService {
     final call = active.value;
     if (call == null) return;
     call.micMuted = !call.micMuted;
-    for (final t in call.localStream?.getAudioTracks() ?? const <MediaStreamTrack>[]) {
+    for (final t
+        in call.localStream?.getAudioTracks() ?? const <MediaStreamTrack>[]) {
       t.enabled = !call.micMuted;
     }
     call.changed();
@@ -579,14 +617,16 @@ class CallService {
     final call = active.value;
     if (call == null) return;
     call.cameraOff = !call.cameraOff;
-    for (final t in call.localStream?.getVideoTracks() ?? const <MediaStreamTrack>[]) {
+    for (final t
+        in call.localStream?.getVideoTracks() ?? const <MediaStreamTrack>[]) {
       t.enabled = !call.cameraOff;
     }
     call.changed();
   }
 
   Future<void> switchCamera() async {
-    final tracks = active.value?.localStream?.getVideoTracks() ?? const <MediaStreamTrack>[];
+    final tracks = active.value?.localStream?.getVideoTracks() ??
+        const <MediaStreamTrack>[];
     if (tracks.isEmpty) return;
     await Helper.switchCamera(tracks.first);
   }
@@ -596,13 +636,21 @@ class CallService {
   Future<void> hangUp({String reason = 'ended'}) async {
     final call = active.value;
     if (call == null || call.isOver) return;
-    final notAnswered = call.outgoing && call.connectedAt == null && _appliedAnswer == 0;
-    final status = notAnswered ? (reason == 'no_answer' ? 'missed' : 'cancelled') : 'ended';
-    await _finish(call, notAnswered ? (reason == 'no_answer' ? 'no_answer' : 'cancelled') : reason,
+    final notAnswered =
+        call.outgoing && call.connectedAt == null && _appliedAnswer == 0;
+    final status = notAnswered
+        ? (reason == 'no_answer' ? 'missed' : 'cancelled')
+        : 'ended';
+    await _finish(
+        call,
+        notAnswered
+            ? (reason == 'no_answer' ? 'no_answer' : 'cancelled')
+            : reason,
         callStatus: status);
   }
 
-  Future<void> _finish(ActiveCall call, String reason, {bool writeStatus = true, String callStatus = 'ended'}) async {
+  Future<void> _finish(ActiveCall call, String reason,
+      {bool writeStatus = true, String callStatus = 'ended'}) async {
     if (call.isOver) return;
     call.endReason = reason;
     final seconds = call.duration.inSeconds;
@@ -625,14 +673,17 @@ class CallService {
     }
     final historyStatus = call.connectedAt != null
         ? 'answered'
-        : (call.outgoing ? (reason == 'no_answer' ? 'no_answer' : reason) : 'missed');
+        : (call.outgoing
+            ? (reason == 'no_answer' ? 'no_answer' : reason)
+            : 'missed');
     _history(call.me, call.callId).update({
       'status': historyStatus,
       'durationSec': seconds,
       'endedAt': FieldValue.serverTimestamp(),
     }).catchError((_) {});
     try {
-      for (final t in call.localStream?.getTracks() ?? const <MediaStreamTrack>[]) {
+      for (final t
+          in call.localStream?.getTracks() ?? const <MediaStreamTrack>[]) {
         await t.stop();
       }
       await call.localStream?.dispose();

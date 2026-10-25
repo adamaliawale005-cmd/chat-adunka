@@ -10,7 +10,8 @@ class CallLogEntry {
   final String peerId;
   final CallKind kind;
   final bool incoming;
-  final String status; // ringing, answered, missed, rejected, cancelled, busy, ended
+  final String
+      status; // ringing, answered, missed, rejected, cancelled, busy, ended
   final DateTime createdAt;
   final int durationSec;
   final bool seen;

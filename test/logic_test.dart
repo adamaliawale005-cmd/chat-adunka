@@ -28,7 +28,8 @@ void main() {
 
     test('address book numbers use the default country code', () {
       expect(normalizeContactNumber('061 234 5678', '252'), '+252612345678');
-      expect(normalizeContactNumber('+966 50 123 4567', '252'), '+966501234567');
+      expect(
+          normalizeContactNumber('+966 50 123 4567', '252'), '+966501234567');
       expect(normalizeContactNumber('12', '252'), isNull);
     });
 
@@ -48,7 +49,14 @@ void main() {
     });
 
     test('invalid usernames', () {
-      for (final u in ['ab', '9lives', 'Amina', 'has space', 'a' * 21, 'dash-name']) {
+      for (final u in [
+        'ab',
+        '9lives',
+        'Amina',
+        'has space',
+        'a' * 21,
+        'dash-name'
+      ]) {
         expect(usernamePattern.hasMatch(u), isFalse, reason: u);
       }
     });
@@ -74,7 +82,11 @@ void main() {
         members: const ['a', 'b', 'c'],
         admins: const ['a'],
         onlyAdminsCanSend: true,
-        typing: {'b': now, 'c': now.subtract(const Duration(seconds: 30)), 'a': now},
+        typing: {
+          'b': now,
+          'c': now.subtract(const Duration(seconds: 30)),
+          'a': now
+        },
         unread: const {'b': 3},
       );
       expect(chat.typingUsers('a'), ['b']);
@@ -106,7 +118,8 @@ void main() {
     });
 
     test('only recent text messages can be edited', () {
-      ChatMessage msg(MessageType t, Duration age, {bool deleted = false}) => ChatMessage(
+      ChatMessage msg(MessageType t, Duration age, {bool deleted = false}) =>
+          ChatMessage(
             id: 'm',
             chatId: 'a_b',
             senderId: 'a',
@@ -115,11 +128,26 @@ void main() {
             deleted: deleted,
             createdAt: DateTime.now().subtract(age),
           );
-      expect(ChatService.canEdit(msg(MessageType.text, const Duration(hours: 1)), 'a'), isTrue);
-      expect(ChatService.canEdit(msg(MessageType.text, const Duration(hours: 1)), 'b'), isFalse);
-      expect(ChatService.canEdit(msg(MessageType.text, const Duration(days: 3)), 'a'), isFalse);
-      expect(ChatService.canEdit(msg(MessageType.image, const Duration(hours: 1)), 'a'), isFalse);
-      expect(ChatService.canEdit(msg(MessageType.text, Duration.zero, deleted: true), 'a'), isFalse);
+      expect(
+          ChatService.canEdit(
+              msg(MessageType.text, const Duration(hours: 1)), 'a'),
+          isTrue);
+      expect(
+          ChatService.canEdit(
+              msg(MessageType.text, const Duration(hours: 1)), 'b'),
+          isFalse);
+      expect(
+          ChatService.canEdit(
+              msg(MessageType.text, const Duration(days: 3)), 'a'),
+          isFalse);
+      expect(
+          ChatService.canEdit(
+              msg(MessageType.image, const Duration(hours: 1)), 'a'),
+          isFalse);
+      expect(
+          ChatService.canEdit(
+              msg(MessageType.text, Duration.zero, deleted: true), 'a'),
+          isFalse);
     });
   });
 
@@ -131,7 +159,8 @@ void main() {
     });
 
     test('settings survive a round trip', () {
-      final p = AccountPrivate.defaults.copyWith(showLastSeen: false, notifyGroups: false);
+      final p = AccountPrivate.defaults
+          .copyWith(showLastSeen: false, notifyGroups: false);
       final back = AccountPrivate.fromMap(p.toMap());
       expect(back.showLastSeen, isFalse);
       expect(back.notifyGroups, isFalse);
@@ -148,7 +177,8 @@ void main() {
 
     test('durations and sizes', () {
       expect(formatDuration(const Duration(seconds: 75)), '01:15');
-      expect(formatDuration(const Duration(hours: 1, minutes: 2, seconds: 3)), '1:02:03');
+      expect(formatDuration(const Duration(hours: 1, minutes: 2, seconds: 3)),
+          '1:02:03');
       expect(formatBytes(512), '512 B');
       expect(formatBytes(2048), '2 KB');
       expect(formatBytes(5 * 1024 * 1024), '5.0 MB');

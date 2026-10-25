@@ -20,7 +20,8 @@ class ForwardScreen extends StatefulWidget {
 }
 
 class _ForwardScreenState extends State<ForwardScreen> {
-  late final Stream<List<Chat>> _chats = ChatService.instance.watchChats(widget.me);
+  late final Stream<List<Chat>> _chats =
+      ChatService.instance.watchChats(widget.me);
   final Map<String, Chat> _selected = {};
   bool _sending = false;
 
@@ -29,13 +30,18 @@ class _ForwardScreenState extends State<ForwardScreen> {
     var failed = 0;
     for (final chat in _selected.values) {
       try {
-        await AttachmentService.instance.forward(widget.message, chat, widget.me);
+        await AttachmentService.instance
+            .forward(widget.message, chat, widget.me);
       } catch (_) {
         failed++;
       }
     }
     if (!mounted) return;
-    showSnack(context, failed == 0 ? context.tr('forwarded_done') : context.tr('forward_failed'));
+    showSnack(
+        context,
+        failed == 0
+            ? context.tr('forwarded_done')
+            : context.tr('forward_failed'));
     Navigator.of(context).pop();
   }
 
@@ -48,7 +54,8 @@ class _ForwardScreenState extends State<ForwardScreen> {
           : FloatingActionButton.extended(
               onPressed: _sending ? null : _send,
               icon: _sending ? const ButtonSpinner() : const Icon(Icons.send),
-              label: Text(context.tr('send_to_count', {'count': _selected.length})),
+              label: Text(
+                  context.tr('send_to_count', {'count': _selected.length})),
             ),
       body: StreamBuilder<List<Chat>>(
         stream: _chats,
@@ -56,9 +63,14 @@ class _ForwardScreenState extends State<ForwardScreen> {
           if (!snap.hasData) return const LoadingView();
           final blocked = Session.blocked.value;
           final chats = snap.data!
-              .where((c) => c.canSend(widget.me) && (c.isGroup || !blocked.contains(c.otherMember(widget.me))))
+              .where((c) =>
+                  c.canSend(widget.me) &&
+                  (c.isGroup || !blocked.contains(c.otherMember(widget.me))))
               .toList();
-          if (chats.isEmpty) return EmptyState(icon: Icons.forum_outlined, title: context.tr('no_chats_title'));
+          if (chats.isEmpty)
+            return EmptyState(
+                icon: Icons.forum_outlined,
+                title: context.tr('no_chats_title'));
           return ListView.builder(
             itemCount: chats.length,
             itemBuilder: (context, i) {
@@ -67,11 +79,15 @@ class _ForwardScreenState extends State<ForwardScreen> {
                 value: _selected.containsKey(c.id),
                 onChanged: _sending
                     ? null
-                    : (v) => setState(() => v == true ? _selected[c.id] = c : _selected.remove(c.id)),
+                    : (v) => setState(() => v == true
+                        ? _selected[c.id] = c
+                        : _selected.remove(c.id)),
                 secondary: ChatAvatar(chat: c, me: widget.me),
                 title: c.isGroup
                     ? Text(c.name)
-                    : UserName(uid: c.otherMember(widget.me), deletedLabel: context.tr('deleted_account')),
+                    : UserName(
+                        uid: c.otherMember(widget.me),
+                        deletedLabel: context.tr('deleted_account')),
               );
             },
           );

@@ -12,7 +12,8 @@ class PhotoChoice {
   const PhotoChoice({this.base64, this.removed = false});
 }
 
-Future<PhotoChoice?> showPhotoPickerSheet(BuildContext context, {required bool hasPhoto}) async {
+Future<PhotoChoice?> showPhotoPickerSheet(BuildContext context,
+    {required bool hasPhoto}) async {
   final source = await showModalBottomSheet<Object>(
     context: context,
     showDragHandle: true,

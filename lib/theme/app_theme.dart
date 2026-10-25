@@ -85,7 +85,8 @@ class AppTheme {
   static ThemeData dark() => _build(Brightness.dark);
 
   static ThemeData _build(Brightness brightness) {
-    final scheme = ColorScheme.fromSeed(seedColor: aduTeal, brightness: brightness);
+    final scheme =
+        ColorScheme.fromSeed(seedColor: aduTeal, brightness: brightness);
     final isDark = brightness == Brightness.dark;
     return ThemeData(
       useMaterial3: true,
@@ -107,21 +108,25 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size.fromHeight(48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(48),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
-      listTileTheme: const ListTileThemeData(contentPadding: EdgeInsets.symmetric(horizontal: 16)),
+      listTileTheme: const ListTileThemeData(
+          contentPadding: EdgeInsets.symmetric(horizontal: 16)),
       extensions: [isDark ? ChatColors.dark : ChatColors.light],
     );
   }
 }
 
 extension ChatColorsX on BuildContext {
-  ChatColors get chatColors => Theme.of(this).extension<ChatColors>() ?? ChatColors.light;
+  ChatColors get chatColors =>
+      Theme.of(this).extension<ChatColors>() ?? ChatColors.light;
 }

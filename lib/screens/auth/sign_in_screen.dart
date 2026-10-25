@@ -31,13 +31,16 @@ void goToAuthGate(BuildContext context) {
 }
 
 class _SignInScreenState extends State<SignInScreen> {
-  late _Method _method = AppConfig.phoneAuthEnabled ? _Method.phone : _Method.email;
+  late _Method _method =
+      AppConfig.phoneAuthEnabled ? _Method.phone : _Method.email;
 
   @override
   Widget build(BuildContext context) {
     final both = AppConfig.phoneAuthEnabled && AppConfig.emailAuthEnabled;
     return Scaffold(
-      appBar: AppBar(title: Text(context.tr(widget.register ? 'create_account' : 'log_in'))),
+      appBar: AppBar(
+          title:
+              Text(context.tr(widget.register ? 'create_account' : 'log_in'))),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(24),
@@ -45,8 +48,14 @@ class _SignInScreenState extends State<SignInScreen> {
             if (both) ...[
               SegmentedButton<_Method>(
                 segments: [
-                  ButtonSegment(value: _Method.phone, icon: const Icon(Icons.phone), label: Text(context.tr('phone'))),
-                  ButtonSegment(value: _Method.email, icon: const Icon(Icons.email_outlined), label: Text(context.tr('email'))),
+                  ButtonSegment(
+                      value: _Method.phone,
+                      icon: const Icon(Icons.phone),
+                      label: Text(context.tr('phone'))),
+                  ButtonSegment(
+                      value: _Method.email,
+                      icon: const Icon(Icons.email_outlined),
+                      label: Text(context.tr('email'))),
                 ],
                 selected: {_method},
                 onSelectionChanged: (s) => setState(() => _method = s.first),
@@ -81,7 +90,8 @@ class _PhoneFormState extends State<_PhoneForm> {
   @override
   void initState() {
     super.initState();
-    final region = WidgetsBinding.instance.platformDispatcher.locale.countryCode;
+    final region =
+        WidgetsBinding.instance.platformDispatcher.locale.countryCode;
     _country = _tryCountry(region) ?? _tryCountry('SO')!;
   }
 
@@ -116,7 +126,10 @@ class _PhoneFormState extends State<_PhoneForm> {
         if (!mounted) return;
         setState(() => _busy = false);
         Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => OtpScreen(phoneNumber: e164, verificationId: verificationId, resendToken: resendToken),
+          builder: (_) => OtpScreen(
+              phoneNumber: e164,
+              verificationId: verificationId,
+              resendToken: resendToken),
         ));
       },
       onAutoVerified: () {
@@ -151,7 +164,8 @@ class _PhoneFormState extends State<_PhoneForm> {
             children: [
               Text(_country.flagEmoji, style: const TextStyle(fontSize: 22)),
               const SizedBox(width: 12),
-              Expanded(child: Text(_country.name, overflow: TextOverflow.ellipsis)),
+              Expanded(
+                  child: Text(_country.name, overflow: TextOverflow.ellipsis)),
               Text('+${_country.phoneCode}', textDirection: TextDirection.ltr),
               const Icon(Icons.arrow_drop_down),
             ],
@@ -166,7 +180,9 @@ class _PhoneFormState extends State<_PhoneForm> {
             enabled: !_busy,
             keyboardType: TextInputType.phone,
             autofillHints: const [AutofillHints.telephoneNumberNational],
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9 ()+-]'))],
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9 ()+-]'))
+            ],
             decoration: InputDecoration(
               labelText: context.tr('phone_number'),
               prefixText: '+${_country.phoneCode} ',
@@ -177,7 +193,8 @@ class _PhoneFormState extends State<_PhoneForm> {
           ),
         ),
         const SizedBox(height: 8),
-        Text(context.tr('sms_billing_note'), style: Theme.of(context).textTheme.bodySmall),
+        Text(context.tr('sms_billing_note'),
+            style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 24),
         FilledButton(
           onPressed: _busy ? null : _send,
@@ -257,7 +274,8 @@ class _EmailFormState extends State<_EmailForm> {
       await AuthService.instance.sendPasswordReset(email);
       if (mounted) showSnack(context, context.tr('reset_email_sent'));
     } on FirebaseAuthException catch (e) {
-      if (mounted) setState(() => _error = context.tr(AuthService.errorKey(e.code)));
+      if (mounted)
+        setState(() => _error = context.tr(AuthService.errorKey(e.code)));
     }
   }
 
@@ -282,7 +300,11 @@ class _EmailFormState extends State<_EmailForm> {
             controller: _password,
             enabled: !_busy,
             obscureText: _obscure,
-            autofillHints: [widget.register ? AutofillHints.newPassword : AutofillHints.password],
+            autofillHints: [
+              widget.register
+                  ? AutofillHints.newPassword
+                  : AutofillHints.password
+            ],
             decoration: InputDecoration(
               labelText: context.tr('password'),
               helperText: widget.register ? context.tr('password_hint') : null,
@@ -299,22 +321,29 @@ class _EmailFormState extends State<_EmailForm> {
               controller: _confirm,
               enabled: !_busy,
               obscureText: _obscure,
-              decoration: InputDecoration(labelText: context.tr('confirm_password')),
+              decoration:
+                  InputDecoration(labelText: context.tr('confirm_password')),
               onSubmitted: (_) => _submit(),
             ),
           ],
           if (_error != null) ...[
             const SizedBox(height: 12),
-            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            Text(_error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ],
           const SizedBox(height: 24),
           FilledButton(
             onPressed: _busy ? null : _submit,
-            child: _busy ? const ButtonSpinner() : Text(context.tr(widget.register ? 'create_account' : 'log_in')),
+            child: _busy
+                ? const ButtonSpinner()
+                : Text(
+                    context.tr(widget.register ? 'create_account' : 'log_in')),
           ),
           if (!widget.register) ...[
             const SizedBox(height: 8),
-            TextButton(onPressed: _busy ? null : _forgot, child: Text(context.tr('forgot_password'))),
+            TextButton(
+                onPressed: _busy ? null : _forgot,
+                child: Text(context.tr('forgot_password'))),
           ],
         ],
       ),

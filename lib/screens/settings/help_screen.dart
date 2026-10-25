@@ -12,7 +12,14 @@ class HelpScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final faqs = ['faq_find', 'faq_group', 'faq_calls', 'faq_files', 'faq_notifications', 'faq_delete'];
+    final faqs = [
+      'faq_find',
+      'faq_group',
+      'faq_calls',
+      'faq_files',
+      'faq_notifications',
+      'faq_delete'
+    ];
     return Scaffold(
       appBar: AppBar(title: Text(context.tr('help'))),
       body: ListView(

@@ -20,7 +20,11 @@ class AppLocalizations {
     'ar': stringsAr,
   };
 
-  static const languageNames = {'en': 'English', 'so': 'Soomaali', 'ar': 'العربية'};
+  static const languageNames = {
+    'en': 'English',
+    'so': 'Soomaali',
+    'ar': 'العربية'
+  };
 
   static AppLocalizations of(BuildContext context) =>
       Localizations.of<AppLocalizations>(context, AppLocalizations) ??
@@ -28,11 +32,13 @@ class AppLocalizations {
 
   String tr(String key, [Map<String, Object?> args = const {}]) {
     var text = tables[locale.languageCode]?[key] ?? stringsEn[key] ?? key;
-    args.forEach((name, value) => text = text.replaceAll('{$name}', '${value ?? ''}'));
+    args.forEach(
+        (name, value) => text = text.replaceAll('{$name}', '${value ?? ''}'));
     return text;
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = [
     delegate,
@@ -54,14 +60,17 @@ class AppLocalizations {
   }
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
-  bool isSupported(Locale locale) => AppLocalizations.tables.containsKey(locale.languageCode);
+  bool isSupported(Locale locale) =>
+      AppLocalizations.tables.containsKey(locale.languageCode);
 
   @override
-  Future<AppLocalizations> load(Locale locale) async => AppLocalizations(locale);
+  Future<AppLocalizations> load(Locale locale) async =>
+      AppLocalizations(locale);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -69,11 +78,13 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
 
 /// Material widgets have no built-in Somali texts on every Flutter version;
 /// fall back to English for those (our own texts are still Somali).
-class _FallbackMaterialLocalizationsDelegate extends LocalizationsDelegate<MaterialLocalizations> {
+class _FallbackMaterialLocalizationsDelegate
+    extends LocalizationsDelegate<MaterialLocalizations> {
   const _FallbackMaterialLocalizationsDelegate();
 
   @override
-  bool isSupported(Locale locale) => !GlobalMaterialLocalizations.delegate.isSupported(locale);
+  bool isSupported(Locale locale) =>
+      !GlobalMaterialLocalizations.delegate.isSupported(locale);
 
   @override
   Future<MaterialLocalizations> load(Locale locale) =>
@@ -83,11 +94,13 @@ class _FallbackMaterialLocalizationsDelegate extends LocalizationsDelegate<Mater
   bool shouldReload(_FallbackMaterialLocalizationsDelegate old) => false;
 }
 
-class _FallbackCupertinoLocalizationsDelegate extends LocalizationsDelegate<CupertinoLocalizations> {
+class _FallbackCupertinoLocalizationsDelegate
+    extends LocalizationsDelegate<CupertinoLocalizations> {
   const _FallbackCupertinoLocalizationsDelegate();
 
   @override
-  bool isSupported(Locale locale) => !GlobalCupertinoLocalizations.delegate.isSupported(locale);
+  bool isSupported(Locale locale) =>
+      !GlobalCupertinoLocalizations.delegate.isSupported(locale);
 
   @override
   Future<CupertinoLocalizations> load(Locale locale) =>

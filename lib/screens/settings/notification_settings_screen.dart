@@ -13,10 +13,12 @@ class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key, required this.authUser});
 
   @override
-  State<NotificationSettingsScreen> createState() => _NotificationSettingsScreenState();
+  State<NotificationSettingsScreen> createState() =>
+      _NotificationSettingsScreenState();
 }
 
-class _NotificationSettingsScreenState extends State<NotificationSettingsScreen> with WidgetsBindingObserver {
+class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
+    with WidgetsBindingObserver {
   PermissionStatus? _permission;
 
   @override
@@ -70,7 +72,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               child: ListTile(
                 leading: const Icon(Icons.notifications_off_outlined),
                 title: Text(context.tr('notifications_blocked')),
-                trailing: TextButton(onPressed: _request, child: Text(context.tr('allow'))),
+                trailing: TextButton(
+                    onPressed: _request, child: Text(context.tr('allow'))),
               ),
             ),
           SwitchListTile(
@@ -101,7 +104,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           const Divider(),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(context.tr('push_note'), style: Theme.of(context).textTheme.bodySmall),
+            child: Text(context.tr('push_note'),
+                style: Theme.of(context).textTheme.bodySmall),
           ),
         ]),
       ),

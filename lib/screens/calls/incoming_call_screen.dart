@@ -37,7 +37,8 @@ class _IncomingCallScreenState extends State<IncomingCallScreen> {
         if (mounted && !_busy) Navigator.of(context).maybePop();
       }
     }, onError: (_) {});
-    _vibrate = Timer.periodic(const Duration(seconds: 2), (_) => HapticFeedback.heavyImpact());
+    _vibrate = Timer.periodic(
+        const Duration(seconds: 2), (_) => HapticFeedback.heavyImpact());
     HapticFeedback.heavyImpact();
   }
 
@@ -60,11 +61,14 @@ class _IncomingCallScreenState extends State<IncomingCallScreen> {
         nav.pop();
         return;
       }
-      nav.pushReplacement(MaterialPageRoute(builder: (_) => CallScreen(call: active)));
+      nav.pushReplacement(
+          MaterialPageRoute(builder: (_) => CallScreen(call: active)));
     } on CallPermissionDenied catch (e) {
       if (!mounted) return;
       setState(() => _busy = false);
-      final msg = context.tr(widget.call.kind == CallKind.video ? 'camera_mic_permission' : 'mic_permission_needed');
+      final msg = context.tr(widget.call.kind == CallKind.video
+          ? 'camera_mic_permission'
+          : 'mic_permission_needed');
       if (e.permanently) {
         final open = await confirm(
           context,
@@ -108,10 +112,14 @@ class _IncomingCallScreenState extends State<IncomingCallScreen> {
             const SizedBox(height: 16),
             StreamBuilder<AppUser>(
               stream: UserService.instance.watchUser(widget.call.callerId),
-              initialData: UserService.instance.cachedUser(widget.call.callerId),
+              initialData:
+                  UserService.instance.cachedUser(widget.call.callerId),
               builder: (context, snap) => Text(
                 snap.data?.displayName ?? '',
-                style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w600),
               ),
             ),
             const Spacer(),
@@ -145,7 +153,11 @@ class _CircleAction extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback? onTap;
-  const _CircleAction({required this.color, required this.icon, required this.label, this.onTap});
+  const _CircleAction(
+      {required this.color,
+      required this.icon,
+      required this.label,
+      this.onTap});
 
   @override
   Widget build(BuildContext context) => Column(children: [
@@ -155,7 +167,9 @@ class _CircleAction extends StatelessWidget {
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: onTap,
-            child: Padding(padding: const EdgeInsets.all(22), child: Icon(icon, color: Colors.white, size: 34)),
+            child: Padding(
+                padding: const EdgeInsets.all(22),
+                child: Icon(icon, color: Colors.white, size: 34)),
           ),
         ),
         const SizedBox(height: 8),

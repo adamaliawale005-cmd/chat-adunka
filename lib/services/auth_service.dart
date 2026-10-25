@@ -40,7 +40,8 @@ class AuthService {
     );
   }
 
-  Future<void> verifyCode({required String verificationId, required String smsCode}) async {
+  Future<void> verifyCode(
+      {required String verificationId, required String smsCode}) async {
     final credential = PhoneAuthProvider.credential(
       verificationId: verificationId,
       smsCode: smsCode,

@@ -19,7 +19,8 @@ String toE164(String dialCode, String input) {
   return '+$dialCode$digits';
 }
 
-bool isPlausibleE164(String e164) => RegExp(r'^\+[1-9][0-9]{6,14}$').hasMatch(e164);
+bool isPlausibleE164(String e164) =>
+    RegExp(r'^\+[1-9][0-9]{6,14}$').hasMatch(e164);
 
 /// Normalises a number from the phone's address book. Numbers without a
 /// country code are assumed to be in [defaultDialCode].
@@ -38,7 +39,8 @@ String? dialCodeOf(String e164, Iterable<String> knownCodes) {
   String? best;
   for (final code in knownCodes) {
     if (code.isEmpty) continue;
-    if (digits.startsWith(code) && (best == null || code.length > best.length)) best = code;
+    if (digits.startsWith(code) && (best == null || code.length > best.length))
+      best = code;
   }
   return best;
 }

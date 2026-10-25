@@ -73,7 +73,8 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final showRemoteVideo = call.isVideo && call.remoteVideo && call.phase != CallPhase.ended;
+    final showRemoteVideo =
+        call.isVideo && call.remoteVideo && call.phase != CallPhase.ended;
     return PopScope(
       canPop: call.isOver,
       child: Scaffold(
@@ -82,7 +83,9 @@ class _CallScreenState extends State<CallScreen> {
           children: [
             if (showRemoteVideo)
               Positioned.fill(
-                child: RTCVideoView(call.remoteRenderer, objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
+                child: RTCVideoView(call.remoteRenderer,
+                    objectFit:
+                        RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
               ),
             SafeArea(
               child: Column(
@@ -97,15 +100,21 @@ class _CallScreenState extends State<CallScreen> {
                     initialData: UserService.instance.cachedUser(call.peerId),
                     builder: (context, snap) => Text(
                       snap.data?.displayName ?? '',
-                      style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(_status(context), style: const TextStyle(color: Colors.white70, fontSize: 16)),
+                  Text(_status(context),
+                      style:
+                          const TextStyle(color: Colors.white70, fontSize: 16)),
                   if (call.phase == CallPhase.reconnecting)
                     const Padding(
                       padding: EdgeInsets.only(top: 8),
-                      child: SizedBox(width: 120, child: LinearProgressIndicator()),
+                      child: SizedBox(
+                          width: 120, child: LinearProgressIndicator()),
                     ),
                   const Spacer(),
                   _controls(context),
@@ -113,7 +122,9 @@ class _CallScreenState extends State<CallScreen> {
                 ],
               ),
             ),
-            if (call.isVideo && !call.cameraOff && call.phase != CallPhase.ended)
+            if (call.isVideo &&
+                !call.cameraOff &&
+                call.phase != CallPhase.ended)
               PositionedDirectional(
                 end: 16,
                 top: MediaQuery.of(context).padding.top + 16,
@@ -184,12 +195,18 @@ class _RoundButton extends StatelessWidget {
   final VoidCallback? onTap;
   final bool active;
   final Color? color;
-  const _RoundButton({required this.icon, required this.label, this.onTap, this.active = false, this.color});
+  const _RoundButton(
+      {required this.icon,
+      required this.label,
+      this.onTap,
+      this.active = false,
+      this.color});
 
   @override
   Widget build(BuildContext context) {
     final bg = color ?? (active ? Colors.white : Colors.white24);
-    final fg = color != null ? Colors.white : (active ? Colors.black : Colors.white);
+    final fg =
+        color != null ? Colors.white : (active ? Colors.black : Colors.white);
     return SizedBox(
       width: 72,
       child: Column(children: [
@@ -199,11 +216,15 @@ class _RoundButton extends StatelessWidget {
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: onTap,
-            child: Padding(padding: const EdgeInsets.all(16), child: Icon(icon, color: fg, size: 28)),
+            child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Icon(icon, color: fg, size: 28)),
           ),
         ),
         const SizedBox(height: 6),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12), textAlign: TextAlign.center),
+        Text(label,
+            style: const TextStyle(color: Colors.white70, fontSize: 12),
+            textAlign: TextAlign.center),
       ]),
     );
   }

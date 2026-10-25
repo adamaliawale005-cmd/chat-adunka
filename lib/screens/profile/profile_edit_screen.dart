@@ -18,7 +18,11 @@ class ProfileEditScreen extends StatefulWidget {
   final AppUser? existing;
   final bool isFirstSetup;
 
-  const ProfileEditScreen({super.key, required this.authUser, this.existing, this.isFirstSetup = false});
+  const ProfileEditScreen(
+      {super.key,
+      required this.authUser,
+      this.existing,
+      this.isFirstSetup = false});
 
   @override
   State<ProfileEditScreen> createState() => _ProfileEditScreenState();
@@ -27,9 +31,12 @@ class ProfileEditScreen extends StatefulWidget {
 enum _UsernameState { unknown, checking, available, taken, invalid }
 
 class _ProfileEditScreenState extends State<ProfileEditScreen> {
-  late final TextEditingController _name = TextEditingController(text: widget.existing?.displayName ?? '');
-  late final TextEditingController _username = TextEditingController(text: widget.existing?.username ?? '');
-  late final TextEditingController _about = TextEditingController(text: widget.existing?.about ?? '');
+  late final TextEditingController _name =
+      TextEditingController(text: widget.existing?.displayName ?? '');
+  late final TextEditingController _username =
+      TextEditingController(text: widget.existing?.username ?? '');
+  late final TextEditingController _about =
+      TextEditingController(text: widget.existing?.about ?? '');
   late String? _photo = widget.existing?.photoBase64;
   bool _photoChanged = false;
   bool _saving = false;
@@ -66,9 +73,11 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     setState(() => _usernameState = _UsernameState.checking);
     _debounce = Timer(const Duration(milliseconds: 500), () async {
       try {
-        final ok = await UserService.instance.isUsernameAvailable(u, forUid: widget.authUser.uid);
+        final ok = await UserService.instance
+            .isUsernameAvailable(u, forUid: widget.authUser.uid);
         if (!mounted || normalizeUsername(_username.text) != u) return;
-        setState(() => _usernameState = ok ? _UsernameState.available : _UsernameState.taken);
+        setState(() => _usernameState =
+            ok ? _UsernameState.available : _UsernameState.taken);
       } catch (_) {
         if (mounted) setState(() => _usernameState = _UsernameState.unknown);
       }
@@ -76,7 +85,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   }
 
   Future<void> _choosePhoto() async {
-    final choice = await showPhotoPickerSheet(context, hasPhoto: _photo != null);
+    final choice =
+        await showPhotoPickerSheet(context, hasPhoto: _photo != null);
     if (choice == null) return;
     setState(() {
       _photo = choice.removed ? null : choice.base64;
@@ -129,7 +139,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
   Widget? _usernameSuffix() {
     switch (_usernameState) {
       case _UsernameState.checking:
-        return const Padding(padding: EdgeInsets.all(14), child: ButtonSpinner());
+        return const Padding(
+            padding: EdgeInsets.all(14), child: ButtonSpinner());
       case _UsernameState.available:
         return const Icon(Icons.check_circle, color: Colors.green);
       case _UsernameState.taken:
@@ -158,12 +169,14 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
     final account = widget.authUser.phoneNumber ?? widget.authUser.email ?? '';
     return Scaffold(
       appBar: AppBar(
-        title: Text(context.tr(widget.isFirstSetup ? 'create_profile' : 'edit_profile')),
+        title: Text(context
+            .tr(widget.isFirstSetup ? 'create_profile' : 'edit_profile')),
         actions: [
           if (widget.isFirstSetup)
             TextButton(
               onPressed: _saving ? null : () => AuthService.instance.signOut(),
-              child: Text(context.tr('sign_out'), style: const TextStyle(color: Colors.white)),
+              child: Text(context.tr('sign_out'),
+                  style: const TextStyle(color: Colors.white)),
             ),
         ],
       ),
@@ -219,16 +232,22 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
               controller: _about,
               enabled: !_saving,
               maxLength: 140,
-              decoration: InputDecoration(labelText: context.tr('about_optional')),
+              decoration:
+                  InputDecoration(labelText: context.tr('about_optional')),
             ),
             if (_error != null) ...[
               const SizedBox(height: 8),
-              Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              Text(_error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
             ],
             const SizedBox(height: 16),
             FilledButton(
-              onPressed: _saving || _usernameState == _UsernameState.taken ? null : _save,
-              child: _saving ? const ButtonSpinner() : Text(context.tr(widget.isFirstSetup ? 'continue' : 'save')),
+              onPressed: _saving || _usernameState == _UsernameState.taken
+                  ? null
+                  : _save,
+              child: _saving
+                  ? const ButtonSpinner()
+                  : Text(context.tr(widget.isFirstSetup ? 'continue' : 'save')),
             ),
           ],
         ),

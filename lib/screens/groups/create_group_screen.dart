@@ -38,7 +38,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   }
 
   Future<void> _pickMembers() async {
-    final picked = await Navigator.of(context).push<List<String>>(MaterialPageRoute(
+    final picked =
+        await Navigator.of(context).push<List<String>>(MaterialPageRoute(
       builder: (_) => UserPickerScreen(
         me: widget.me,
         title: context.tr('add_participants'),
@@ -50,7 +51,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       Navigator.of(context).pop();
       return;
     }
-    if (picked != null) setState(() => _members = {..._members, ...picked}.toList());
+    if (picked != null)
+      setState(() => _members = {..._members, ...picked}.toList());
   }
 
   Future<void> _create() async {
@@ -78,7 +80,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         Navigator.of(context).pop();
         return;
       }
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => ChatScreen(me: widget.me, chat: chat)));
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+          builder: (_) => ChatScreen(me: widget.me, chat: chat)));
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
@@ -100,17 +103,24 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           Row(children: [
             GestureDetector(
               onTap: () async {
-                final c = await showPhotoPickerSheet(context, hasPhoto: _photo != null);
-                if (c != null) setState(() => _photo = c.removed ? null : c.base64);
+                final c = await showPhotoPickerSheet(context,
+                    hasPhoto: _photo != null);
+                if (c != null)
+                  setState(() => _photo = c.removed ? null : c.base64);
               },
-              child: Avatar(photoBase64: _photo, name: '', radius: 32, fallbackIcon: Icons.add_a_photo_outlined),
+              child: Avatar(
+                  photoBase64: _photo,
+                  name: '',
+                  radius: 32,
+                  fallbackIcon: Icons.add_a_photo_outlined),
             ),
             const SizedBox(width: 16),
             Expanded(
               child: TextField(
                 controller: _name,
                 maxLength: 60,
-                decoration: InputDecoration(labelText: context.tr('group_name')),
+                decoration:
+                    InputDecoration(labelText: context.tr('group_name')),
               ),
             ),
           ]),
@@ -118,7 +128,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           TextField(
             controller: _description,
             maxLength: 200,
-            decoration: InputDecoration(labelText: context.tr('group_description_optional')),
+            decoration: InputDecoration(
+                labelText: context.tr('group_description_optional')),
           ),
           const SizedBox(height: 16),
           Row(children: [
@@ -128,13 +139,17 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                 style: Theme.of(context).textTheme.titleSmall,
               ),
             ),
-            TextButton.icon(onPressed: _pickMembers, icon: const Icon(Icons.person_add), label: Text(context.tr('add'))),
+            TextButton.icon(
+                onPressed: _pickMembers,
+                icon: const Icon(Icons.person_add),
+                label: Text(context.tr('add'))),
           ]),
           for (final uid in _members)
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: UserAvatar(uid: uid),
-              title: UserName(uid: uid, deletedLabel: context.tr('deleted_account')),
+              title: UserName(
+                  uid: uid, deletedLabel: context.tr('deleted_account')),
               trailing: IconButton(
                 icon: const Icon(Icons.close),
                 onPressed: () => setState(() => _members.remove(uid)),

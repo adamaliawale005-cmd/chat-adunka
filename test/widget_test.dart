@@ -12,7 +12,9 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   tearDown(() => AppSettings.instance.setLocale(null));
 
-  testWidgets('welcome screen opens and leads to setup when Firebase is missing', (tester) async {
+  testWidgets(
+      'welcome screen opens and leads to setup when Firebase is missing',
+      (tester) async {
     await tester.pumpWidget(const AduChatApp());
     await tester.pumpAndSettle();
     expect(find.text('Welcome to AduChat'), findsOneWidget);
@@ -32,7 +34,8 @@ void main() {
     expect(Directionality.of(ctx), TextDirection.rtl);
   });
 
-  testWidgets('Somali texts load without missing Material localizations', (tester) async {
+  testWidgets('Somali texts load without missing Material localizations',
+      (tester) async {
     await AppSettings.instance.setLocale(const Locale('so'));
     await tester.pumpWidget(const AduChatApp());
     await tester.pumpAndSettle();
@@ -50,9 +53,13 @@ void main() {
   test('placeholders are kept in every translation', () {
     final placeholder = RegExp(r'\{[a-z]+\}');
     for (final key in stringsEn.keys) {
-      final expected = placeholder.allMatches(stringsEn[key]!).map((m) => m.group(0)).toSet();
+      final expected = placeholder
+          .allMatches(stringsEn[key]!)
+          .map((m) => m.group(0))
+          .toSet();
       for (final table in [stringsSo, stringsAr]) {
-        final actual = placeholder.allMatches(table[key]!).map((m) => m.group(0)).toSet();
+        final actual =
+            placeholder.allMatches(table[key]!).map((m) => m.group(0)).toSet();
         expect(actual, expected, reason: 'placeholders differ for "$key"');
       }
     }
@@ -61,10 +68,12 @@ void main() {
   test('every literal translation key used in the code exists', () {
     final keyPattern = RegExp(r"\btr\('([a-z0-9_]+)'");
     final missing = <String>{};
-    for (final f in Directory('lib').listSync(recursive: true).whereType<File>()) {
+    for (final f
+        in Directory('lib').listSync(recursive: true).whereType<File>()) {
       if (!f.path.endsWith('.dart')) continue;
       for (final m in keyPattern.allMatches(f.readAsStringSync())) {
-        if (!stringsEn.containsKey(m.group(1))) missing.add('${m.group(1)} (${f.path})');
+        if (!stringsEn.containsKey(m.group(1)))
+          missing.add('${m.group(1)} (${f.path})');
       }
     }
     expect(missing, isEmpty);

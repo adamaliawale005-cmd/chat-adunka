@@ -20,13 +20,16 @@ class CallsTab extends StatefulWidget {
 }
 
 class _CallsTabState extends State<CallsTab> {
-  late final Stream<List<CallLogEntry>> _history = CallService.instance.watchHistory(widget.me);
+  late final Stream<List<CallLogEntry>> _history =
+      CallService.instance.watchHistory(widget.me);
 
   String _statusLabel(BuildContext context, CallLogEntry e) {
     if (e.isMissed) return context.tr('missed_call');
     switch (e.status) {
       case 'answered':
-        return e.durationSec > 0 ? formatDuration(Duration(seconds: e.durationSec)) : context.tr('answered');
+        return e.durationSec > 0
+            ? formatDuration(Duration(seconds: e.durationSec))
+            : context.tr('answered');
       case 'rejected':
         return context.tr(e.incoming ? 'declined' : 'call_end_rejected');
       case 'busy':
@@ -46,11 +49,15 @@ class _CallsTabState extends State<CallsTab> {
     return StreamBuilder<List<CallLogEntry>>(
       stream: _history,
       builder: (context, snap) {
-        if (snap.hasError) return ErrorView(message: context.tr('calls_load_failed'), details: '${snap.error}');
+        if (snap.hasError)
+          return ErrorView(
+              message: context.tr('calls_load_failed'),
+              details: '${snap.error}');
         if (!snap.hasData) return const LoadingView();
         final entries = snap.data!;
         if (widget.active) {
-          WidgetsBinding.instance.addPostFrameCallback((_) => CallService.instance.markHistorySeen(widget.me, entries));
+          WidgetsBinding.instance.addPostFrameCallback(
+              (_) => CallService.instance.markHistorySeen(widget.me, entries));
         }
         return Column(
           children: [
@@ -65,14 +72,19 @@ class _CallsTabState extends State<CallsTab> {
               ),
             Expanded(
               child: entries.isEmpty
-                  ? EmptyState(icon: Icons.call_outlined, title: context.tr('no_calls'), message: context.tr('no_calls_message'))
+                  ? EmptyState(
+                      icon: Icons.call_outlined,
+                      title: context.tr('no_calls'),
+                      message: context.tr('no_calls_message'))
                   : ListView.separated(
                       itemCount: entries.length,
-                      separatorBuilder: (_, __) => const Divider(height: 1, indent: 80),
+                      separatorBuilder: (_, __) =>
+                          const Divider(height: 1, indent: 80),
                       itemBuilder: (context, i) {
                         final e = entries[i];
                         final missed = e.isMissed;
-                        final color = missed ? Theme.of(context).colorScheme.error : null;
+                        final color =
+                            missed ? Theme.of(context).colorScheme.error : null;
                         return Dismissible(
                           key: ValueKey(e.callId),
                           direction: DismissDirection.endToStart,
@@ -82,17 +94,24 @@ class _CallsTabState extends State<CallsTab> {
                             padding: const EdgeInsets.symmetric(horizontal: 24),
                             child: const Icon(Icons.delete_outline),
                           ),
-                          onDismissed: (_) => CallService.instance.deleteHistoryEntry(widget.me, e.callId),
+                          onDismissed: (_) => CallService.instance
+                              .deleteHistoryEntry(widget.me, e.callId),
                           child: ListTile(
                             leading: UserAvatar(uid: e.peerId, radius: 24),
                             title: UserName(
                               uid: e.peerId,
                               deletedLabel: context.tr('deleted_account'),
-                              style: TextStyle(color: color, fontWeight: missed && !e.seen ? FontWeight.bold : null),
+                              style: TextStyle(
+                                  color: color,
+                                  fontWeight: missed && !e.seen
+                                      ? FontWeight.bold
+                                      : null),
                             ),
                             subtitle: Row(children: [
                               Icon(
-                                e.incoming ? Icons.call_received : Icons.call_made,
+                                e.incoming
+                                    ? Icons.call_received
+                                    : Icons.call_made,
                                 size: 16,
                                 color: color ?? Colors.green,
                               ),
@@ -106,9 +125,14 @@ class _CallsTabState extends State<CallsTab> {
                               ),
                             ]),
                             trailing: IconButton(
-                              tooltip: context.tr(e.kind == CallKind.video ? 'video_call' : 'voice_call'),
-                              icon: Icon(e.kind == CallKind.video ? Icons.videocam_outlined : Icons.call_outlined),
-                              onPressed: () => startCall(context, me: widget.me, peer: e.peerId, kind: e.kind),
+                              tooltip: context.tr(e.kind == CallKind.video
+                                  ? 'video_call'
+                                  : 'voice_call'),
+                              icon: Icon(e.kind == CallKind.video
+                                  ? Icons.videocam_outlined
+                                  : Icons.call_outlined),
+                              onPressed: () => startCall(context,
+                                  me: widget.me, peer: e.peerId, kind: e.kind),
                             ),
                           ),
                         );

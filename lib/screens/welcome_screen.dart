@@ -10,7 +10,8 @@ class WelcomeScreen extends StatelessWidget {
   final bool firebaseReady;
   final Object? firebaseError;
 
-  const WelcomeScreen({super.key, required this.firebaseReady, this.firebaseError});
+  const WelcomeScreen(
+      {super.key, required this.firebaseReady, this.firebaseError});
 
   void _go(BuildContext context, {required bool register}) {
     Navigator.of(context).push(MaterialPageRoute(
@@ -39,18 +40,21 @@ class WelcomeScreen extends StatelessWidget {
           builder: (context, constraints) => SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight - 32),
+              constraints:
+                  BoxConstraints(minHeight: constraints.maxHeight - 32),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 420),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Image.asset('assets/branding/logo.png', width: 110, height: 110),
+                      Image.asset('assets/branding/logo.png',
+                          width: 110, height: 110),
                       const SizedBox(height: 24),
                       Text(
                         context.tr('welcome_title'),
-                        style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                        style: theme.textTheme.headlineSmall
+                            ?.copyWith(fontWeight: FontWeight.bold),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 10),

@@ -24,7 +24,8 @@ class AppConfig {
   /// "turn:turn.example.com:3478?transport=udp,turns:turn.example.com:5349".
   static const String _turnUrls = String.fromEnvironment('TURN_URLS');
   static const String turnUsername = String.fromEnvironment('TURN_USERNAME');
-  static const String turnCredential = String.fromEnvironment('TURN_CREDENTIAL');
+  static const String turnCredential =
+      String.fromEnvironment('TURN_CREDENTIAL');
 
   static List<String> get turnUrls => _turnUrls
       .split(',')

@@ -23,7 +23,8 @@ class ChatService {
   static String newId() => _uuid.v4().replaceAll('-', '');
 
   FirebaseFirestore get _db => FirebaseFirestore.instance;
-  CollectionReference<Map<String, dynamic>> get _chats => _db.collection('chats');
+  CollectionReference<Map<String, dynamic>> get _chats =>
+      _db.collection('chats');
   CollectionReference<Map<String, dynamic>> messagesOf(String chatId) =>
       _chats.doc(chatId).collection('messages');
 
@@ -38,21 +39,23 @@ class ChatService {
   final Set<String> openChats = {};
 
   /// Messages being uploaded or that failed, per chat.
-  final ValueNotifier<Map<String, List<OutgoingMessage>>> outbox = ValueNotifier({});
+  final ValueNotifier<Map<String, List<OutgoingMessage>>> outbox =
+      ValueNotifier({});
 
   // ---------- reading ----------
 
-  Stream<List<Chat>> watchChats(String uid) => _chats
-      .where('members', arrayContains: uid)
-      .snapshots()
-      .map((s) {
+  Stream<List<Chat>> watchChats(String uid) =>
+      _chats.where('members', arrayContains: uid).snapshots().map((s) {
         final list = s.docs.map(Chat.fromDoc).toList();
-        list.sort((a, b) => (b.lastMessageAt ?? DateTime(2100)).compareTo(a.lastMessageAt ?? DateTime(2100)));
+        list.sort((a, b) => (b.lastMessageAt ?? DateTime(2100))
+            .compareTo(a.lastMessageAt ?? DateTime(2100)));
         return list;
       });
 
-  Stream<Chat?> watchChat(String chatId) =>
-      _chats.doc(chatId).snapshots().map((d) => d.exists ? Chat.fromDoc(d) : null);
+  Stream<Chat?> watchChat(String chatId) => _chats
+      .doc(chatId)
+      .snapshots()
+      .map((d) => d.exists ? Chat.fromDoc(d) : null);
 
   Future<Chat?> getChat(String chatId) async {
     final d = await _chats.doc(chatId).get();
@@ -60,21 +63,28 @@ class ChatService {
   }
 
   /// Newest [limit] messages, newest first. Raise the limit to page back.
-  Stream<List<ChatMessage>> watchMessages(String chatId, {int limit = 40}) => messagesOf(chatId)
-      .orderBy('clientCreatedAt', descending: true)
-      .limit(limit)
-      .snapshots(includeMetadataChanges: true)
-      .map((s) => s.docs.map((d) => ChatMessage.fromDoc(chatId, d)).toList());
+  Stream<List<ChatMessage>> watchMessages(String chatId, {int limit = 40}) =>
+      messagesOf(chatId)
+          .orderBy('clientCreatedAt', descending: true)
+          .limit(limit)
+          .snapshots(includeMetadataChanges: true)
+          .map((s) =>
+              s.docs.map((d) => ChatMessage.fromDoc(chatId, d)).toList());
 
   /// Searches the latest 500 messages of a conversation.
-  Future<List<ChatMessage>> search(String chatId, String query, String me) async {
+  Future<List<ChatMessage>> search(
+      String chatId, String query, String me) async {
     final q = query.trim().toLowerCase();
     if (q.isEmpty) return const [];
-    final s = await messagesOf(chatId).orderBy('clientCreatedAt', descending: true).limit(500).get();
+    final s = await messagesOf(chatId)
+        .orderBy('clientCreatedAt', descending: true)
+        .limit(500)
+        .get();
     return s.docs
         .map((d) => ChatMessage.fromDoc(chatId, d))
         .where((m) => !m.deleted && !m.hiddenFor.contains(me))
-        .where((m) => m.text.toLowerCase().contains(q) ||
+        .where((m) =>
+            m.text.toLowerCase().contains(q) ||
             (m.attachment?.name.toLowerCase().contains(q) ?? false))
         .toList();
   }
@@ -208,8 +218,10 @@ class ChatService {
 
   /// Retries a failed message. If the first attempt actually reached the
   /// server, nothing is sent again.
-  Future<void> resend(String chatId, String id, Future<void> Function() attempt) async {
-    final existing = outbox.value[chatId]?.where((o) => o.id == id).toList() ?? const [];
+  Future<void> resend(
+      String chatId, String id, Future<void> Function() attempt) async {
+    final existing =
+        outbox.value[chatId]?.where((o) => o.id == id).toList() ?? const [];
     try {
       final doc = await messagesOf(chatId).doc(id).get();
       if (doc.exists) {
@@ -222,7 +234,8 @@ class ChatService {
       await attempt();
       _removeOutbox(chatId, id);
     } catch (e) {
-      if (existing.isNotEmpty) _putOutbox(existing.first.copyWith(failed: true, error: '$e'));
+      if (existing.isNotEmpty)
+        _putOutbox(existing.first.copyWith(failed: true, error: '$e'));
     }
   }
 
@@ -272,7 +285,10 @@ class ChatService {
         if (s.docs.isEmpty) continue;
         final batch = _db.batch();
         for (final d in s.docs) {
-          batch.update(d.reference, {'status': 'delivered', 'deliveredAt': FieldValue.serverTimestamp()});
+          batch.update(d.reference, {
+            'status': 'delivered',
+            'deliveredAt': FieldValue.serverTimestamp()
+          });
         }
         await batch.commit();
       } on FirebaseException {
@@ -284,7 +300,8 @@ class ChatService {
   /// Marks messages as read by [me] and clears the unread counter.
   /// With read receipts turned off, direct messages are only marked
   /// delivered.
-  Future<void> markRead(Chat chat, String me, List<ChatMessage> messages, {required bool readReceipts}) async {
+  Future<void> markRead(Chat chat, String me, List<ChatMessage> messages,
+      {required bool readReceipts}) async {
     final batch = _db.batch();
     var writes = 0;
     for (final m in messages) {
@@ -300,11 +317,14 @@ class ChatService {
           batch.update(messagesOf(chat.id).doc(m.id), {
             'status': 'read',
             'readAt': FieldValue.serverTimestamp(),
-            if (m.status == MessageStatus.sent || m.status == MessageStatus.pending)
+            if (m.status == MessageStatus.sent ||
+                m.status == MessageStatus.pending)
               'deliveredAt': FieldValue.serverTimestamp(),
           });
           writes++;
-        } else if (!readReceipts && (m.status == MessageStatus.sent || m.status == MessageStatus.pending)) {
+        } else if (!readReceipts &&
+            (m.status == MessageStatus.sent ||
+                m.status == MessageStatus.pending)) {
           batch.update(messagesOf(chat.id).doc(m.id), {
             'status': 'delivered',
             'deliveredAt': FieldValue.serverTimestamp(),
@@ -314,9 +334,12 @@ class ChatService {
       }
     }
     if (chat.unreadFor(me) > 0) {
-      batch.set(_chats.doc(chat.id), {
-        'unread': {me: 0},
-      }, SetOptions(merge: true));
+      batch.set(
+          _chats.doc(chat.id),
+          {
+            'unread': {me: 0},
+          },
+          SetOptions(merge: true));
       writes++;
     }
     if (writes == 0) return;
@@ -329,7 +352,8 @@ class ChatService {
 
   // ---------- editing ----------
 
-  Future<void> edit(ChatMessage m, String newText) => messagesOf(m.chatId).doc(m.id).update({
+  Future<void> edit(ChatMessage m, String newText) =>
+      messagesOf(m.chatId).doc(m.id).update({
         'text': newText.trim(),
         'edited': true,
         'editedAt': FieldValue.serverTimestamp(),
@@ -351,7 +375,8 @@ class ChatService {
     }
   }
 
-  Future<void> hideForMe(ChatMessage m, String me) => messagesOf(m.chatId).doc(m.id).update({
+  Future<void> hideForMe(ChatMessage m, String me) =>
+      messagesOf(m.chatId).doc(m.id).update({
         'hiddenFor': FieldValue.arrayUnion([me]),
       });
 
@@ -375,7 +400,8 @@ class ChatService {
     if (!typing) _lastTyping.remove(chatId);
     try {
       await _chats.doc(chatId).update({
-        'typing.$me': typing ? FieldValue.serverTimestamp() : FieldValue.delete(),
+        'typing.$me':
+            typing ? FieldValue.serverTimestamp() : FieldValue.delete(),
       });
     } on FirebaseException {
       // The chat may not exist yet; typing is best-effort.
@@ -412,12 +438,15 @@ class ChatService {
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
-    batch.set(ref.collection('messages').doc(newId()), _system(creator, 'created', now: now));
+    batch.set(ref.collection('messages').doc(newId()),
+        _system(creator, 'created', now: now));
     await batch.commit();
     return ref.id;
   }
 
-  Map<String, dynamic> _system(String actor, String event, {List<String> targets = const [], Timestamp? now}) => {
+  Map<String, dynamic> _system(String actor, String event,
+          {List<String> targets = const [], Timestamp? now}) =>
+      {
         'senderId': actor,
         'type': 'system',
         // Machine-readable event; the app shows it in the reader's language.
@@ -427,17 +456,21 @@ class ChatService {
         'createdAt': FieldValue.serverTimestamp(),
       };
 
-  Future<void> _groupUpdate(String chatId, String actor, Map<String, dynamic> update,
+  Future<void> _groupUpdate(
+      String chatId, String actor, Map<String, dynamic> update,
       {String? event, List<String> targets = const []}) {
     final batch = _db.batch();
-    batch.update(_chats.doc(chatId), {...update, 'updatedAt': FieldValue.serverTimestamp()});
+    batch.update(_chats.doc(chatId),
+        {...update, 'updatedAt': FieldValue.serverTimestamp()});
     if (event != null) {
-      batch.set(messagesOf(chatId).doc(newId()), _system(actor, event, targets: targets));
+      batch.set(messagesOf(chatId).doc(newId()),
+          _system(actor, event, targets: targets));
     }
     return batch.commit();
   }
 
-  Future<void> addMembers(Chat chat, String admin, List<String> uids) => _groupUpdate(
+  Future<void> addMembers(Chat chat, String admin, List<String> uids) =>
+      _groupUpdate(
         chat.id,
         admin,
         {'members': FieldValue.arrayUnion(uids)},
@@ -445,7 +478,8 @@ class ChatService {
         targets: uids,
       );
 
-  Future<void> removeMember(Chat chat, String admin, String uid) => _groupUpdate(
+  Future<void> removeMember(Chat chat, String admin, String uid) =>
+      _groupUpdate(
         chat.id,
         admin,
         {
@@ -456,29 +490,40 @@ class ChatService {
         targets: [uid],
       );
 
-  Future<void> setAdmin(Chat chat, String admin, String uid, bool makeAdmin) => _groupUpdate(
+  Future<void> setAdmin(Chat chat, String admin, String uid, bool makeAdmin) =>
+      _groupUpdate(
         chat.id,
         admin,
-        {'admins': makeAdmin ? FieldValue.arrayUnion([uid]) : FieldValue.arrayRemove([uid])},
+        {
+          'admins': makeAdmin
+              ? FieldValue.arrayUnion([uid])
+              : FieldValue.arrayRemove([uid])
+        },
         event: makeAdmin ? 'admin_added' : 'admin_removed',
         targets: [uid],
       );
 
   Future<void> updateGroupInfo(Chat chat, String actor,
-      {String? name, String? description, String? photoBase64, bool removePhoto = false}) {
+      {String? name,
+      String? description,
+      String? photoBase64,
+      bool removePhoto = false}) {
     final update = <String, dynamic>{};
     if (name != null) update['name'] = name.trim();
     if (description != null) update['description'] = description.trim();
     if (photoBase64 != null) update['photoBase64'] = photoBase64;
     if (removePhoto) update['photoBase64'] = FieldValue.delete();
-    return _groupUpdate(chat.id, actor, update, event: name != null && name.trim() != chat.name ? 'renamed' : null,
+    return _groupUpdate(chat.id, actor, update,
+        event: name != null && name.trim() != chat.name ? 'renamed' : null,
         targets: name != null ? [name.trim()] : const []);
   }
 
-  Future<void> setGroupPermissions(Chat chat, String admin, {bool? onlyAdminsCanSend, bool? onlyAdminsEditInfo}) =>
+  Future<void> setGroupPermissions(Chat chat, String admin,
+          {bool? onlyAdminsCanSend, bool? onlyAdminsEditInfo}) =>
       _groupUpdate(chat.id, admin, {
         if (onlyAdminsCanSend != null) 'onlyAdminsCanSend': onlyAdminsCanSend,
-        if (onlyAdminsEditInfo != null) 'onlyAdminsEditInfo': onlyAdminsEditInfo,
+        if (onlyAdminsEditInfo != null)
+          'onlyAdminsEditInfo': onlyAdminsEditInfo,
       });
 
   /// Leaves a group. If the last admin leaves, the longest-standing member

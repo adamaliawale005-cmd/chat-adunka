@@ -26,19 +26,23 @@ const _callsChannel = AndroidNotificationChannel(
   importance: Importance.max,
 );
 
-final FlutterLocalNotificationsPlugin _local = FlutterLocalNotificationsPlugin();
+final FlutterLocalNotificationsPlugin _local =
+    FlutterLocalNotificationsPlugin();
 
 Future<void> _initLocal({void Function(NotificationResponse)? onTap}) async {
   await _local.initialize(
-    const InitializationSettings(android: AndroidInitializationSettings('ic_notification')),
+    const InitializationSettings(
+        android: AndroidInitializationSettings('ic_notification')),
     onDidReceiveNotificationResponse: onTap,
   );
-  final android = _local.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+  final android = _local.resolvePlatformSpecificImplementation<
+      AndroidFlutterLocalNotificationsPlugin>();
   await android?.createNotificationChannel(_messagesChannel);
   await android?.createNotificationChannel(_callsChannel);
 }
 
-NotificationDetails _details(AndroidNotificationChannel channel) => NotificationDetails(
+NotificationDetails _details(AndroidNotificationChannel channel) =>
+    NotificationDetails(
       android: AndroidNotificationDetails(
         channel.id,
         channel.name,
@@ -47,7 +51,9 @@ NotificationDetails _details(AndroidNotificationChannel channel) => Notification
         priority: Priority.high,
         icon: 'ic_notification',
         color: const Color(0xFF00897B),
-        category: channel.id == 'calls' ? AndroidNotificationCategory.call : AndroidNotificationCategory.message,
+        category: channel.id == 'calls'
+            ? AndroidNotificationCategory.call
+            : AndroidNotificationCategory.message,
       ),
     );
 
@@ -83,7 +89,8 @@ class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
 
-  final GlobalKey<ScaffoldMessengerState> messengerKey = GlobalKey<ScaffoldMessengerState>();
+  final GlobalKey<ScaffoldMessengerState> messengerKey =
+      GlobalKey<ScaffoldMessengerState>();
 
   /// Opens a chat or call from a tapped notification ("chat:<id>" / "call:<id>").
   void Function(String payload)? onOpen;
@@ -142,7 +149,8 @@ class NotificationService {
       if (token != null) await _saveToken(uid, token);
       _tokenSub = messaging.onTokenRefresh.listen((t) => _saveToken(uid, t));
       _fgSub = FirebaseMessaging.onMessage.listen(_onForegroundPush);
-      _openSub = FirebaseMessaging.onMessageOpenedApp.listen((m) => _open(_payloadOf(m)));
+      _openSub = FirebaseMessaging.onMessageOpenedApp
+          .listen((m) => _open(_payloadOf(m)));
       final initial = await messaging.getInitialMessage();
       if (initial != null) _open(_payloadOf(initial));
     } catch (_) {
@@ -166,19 +174,29 @@ class NotificationService {
     try {
       final token = await FirebaseMessaging.instance.getToken();
       if (token != null) {
-        await FirebaseFirestore.instance.collection('users').doc(uid).collection('devices').doc(token).delete();
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .collection('devices')
+            .doc(token)
+            .delete();
       }
       await FirebaseMessaging.instance.deleteToken();
     } catch (_) {}
     await stop();
   }
 
-  Future<void> _saveToken(String uid, String token) => FirebaseFirestore.instance
-      .collection('users')
-      .doc(uid)
-      .collection('devices')
-      .doc(token)
-      .set({'token': token, 'platform': 'android', 'updatedAt': FieldValue.serverTimestamp()});
+  Future<void> _saveToken(String uid, String token) =>
+      FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('devices')
+          .doc(token)
+          .set({
+        'token': token,
+        'platform': 'android',
+        'updatedAt': FieldValue.serverTimestamp()
+      });
 
   String? _payloadOf(RemoteMessage m) {
     final d = m.data;
@@ -194,10 +212,18 @@ class NotificationService {
     if (chatId != null) return;
     final n = m.notification;
     if (n == null) return;
-    showLocal(title: n.title ?? 'AduChat', body: n.body ?? '', payload: _payloadOf(m), call: m.data['type'] == 'call');
+    showLocal(
+        title: n.title ?? 'AduChat',
+        body: n.body ?? '',
+        payload: _payloadOf(m),
+        call: m.data['type'] == 'call');
   }
 
-  Future<void> showLocal({required String title, required String body, String? payload, bool call = false}) async {
+  Future<void> showLocal(
+      {required String title,
+      required String body,
+      String? payload,
+      bool call = false}) async {
     await _ensureLocal();
     if (!_localReady) return;
     try {
@@ -224,20 +250,28 @@ class NotificationService {
 
   /// Compares the chat list with the previous snapshot and notifies about
   /// new messages from other people in chats that are not open.
-  Future<void> onChatsChanged(String me, List<Chat> chats, {required String Function(String key) tr}) async {
+  Future<void> onChatsChanged(String me, List<Chat> chats,
+      {required String Function(String key) tr}) async {
     final first = _known.isEmpty;
     for (final c in chats) {
       final previous = _known[c.id];
       final marker = '${c.lastMessageAt?.millisecondsSinceEpoch}';
       _known[c.id] = marker;
-      if (first || previous == marker || previous == null && c.unreadFor(me) == 0) continue;
-      if (c.lastSenderId == me || c.lastSenderId.isEmpty || c.lastMessageType == 'system') continue;
+      if (first ||
+          previous == marker ||
+          previous == null && c.unreadFor(me) == 0) continue;
+      if (c.lastSenderId == me ||
+          c.lastSenderId.isEmpty ||
+          c.lastMessageType == 'system') continue;
       if (c.unreadFor(me) == 0) continue;
       if (ChatService.instance.openChats.contains(c.id)) continue;
       if (c.isGroup ? !prefs.notifyGroups : !prefs.notifyMessages) continue;
       final sender = await UserService.instance.getUser(c.lastSenderId);
-      final senderName = sender.hasProfile ? sender.displayName : tr('deleted_account');
-      final body = prefs.notificationPreview ? c.lastMessage : tr('notification_hidden_preview');
+      final senderName =
+          sender.hasProfile ? sender.displayName : tr('deleted_account');
+      final body = prefs.notificationPreview
+          ? c.lastMessage
+          : tr('notification_hidden_preview');
       await showLocal(
         title: c.isGroup ? c.name : senderName,
         body: c.isGroup ? '$senderName: $body' : body,

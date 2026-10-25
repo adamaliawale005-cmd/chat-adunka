@@ -9,7 +9,8 @@ class Session {
   static String? uid;
 
   /// Private account settings (privacy and notification preferences).
-  static final ValueNotifier<AccountPrivate> settings = ValueNotifier(AccountPrivate.defaults);
+  static final ValueNotifier<AccountPrivate> settings =
+      ValueNotifier(AccountPrivate.defaults);
 
   /// People this user has blocked.
   static final ValueNotifier<Set<String>> blocked = ValueNotifier(<String>{});

@@ -14,16 +14,21 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Image.asset('assets/branding/logo_foreground.png', width: 160, height: 160),
+            Image.asset('assets/branding/logo_foreground.png',
+                width: 160, height: 160),
             const Text(
               'AduChat',
-              style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 32),
             const SizedBox(
               width: 28,
               height: 28,
-              child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white),
+              child: CircularProgressIndicator(
+                  strokeWidth: 3, color: Colors.white),
             ),
           ],
         ),

@@ -77,7 +77,8 @@ class Chat {
     );
   }
 
-  String otherMember(String me) => members.firstWhere((m) => m != me, orElse: () => me);
+  String otherMember(String me) =>
+      members.firstWhere((m) => m != me, orElse: () => me);
 
   bool isAdmin(String uid) => admins.contains(uid);
 
@@ -85,13 +86,15 @@ class Chat {
 
   bool canSend(String uid) => !isGroup || !onlyAdminsCanSend || isAdmin(uid);
 
-  bool canEditInfo(String uid) => isGroup && (!onlyAdminsEditInfo || isAdmin(uid));
+  bool canEditInfo(String uid) =>
+      isGroup && (!onlyAdminsEditInfo || isAdmin(uid));
 
   /// Members (other than [me]) who typed within the last 6 seconds.
   List<String> typingUsers(String me) {
     final now = DateTime.now();
     return typing.entries
-        .where((e) => e.key != me && now.difference(e.value).inSeconds.abs() < 6)
+        .where(
+            (e) => e.key != me && now.difference(e.value).inSeconds.abs() < 6)
         .map((e) => e.key)
         .toList();
   }
@@ -99,8 +102,8 @@ class Chat {
 
 enum MessageType { text, image, video, audio, file, system }
 
-MessageType messageTypeFrom(String? s) =>
-    MessageType.values.firstWhere((t) => t.name == s, orElse: () => MessageType.text);
+MessageType messageTypeFrom(String? s) => MessageType.values
+    .firstWhere((t) => t.name == s, orElse: () => MessageType.text);
 
 enum MessageStatus { pending, sent, delivered, read, failed }
 
@@ -222,9 +225,11 @@ class ChatMessage {
   /// Short text used in chat lists, notifications and reply previews.
   String get previewText => text;
 
-  factory ChatMessage.fromDoc(String chatId, DocumentSnapshot<Map<String, dynamic>> doc) {
+  factory ChatMessage.fromDoc(
+      String chatId, DocumentSnapshot<Map<String, dynamic>> doc) {
     final d = doc.data() ?? const <String, dynamic>{};
-    final created = _ts(d['createdAt']) ?? _ts(d['clientCreatedAt']) ?? DateTime.now();
+    final created =
+        _ts(d['createdAt']) ?? _ts(d['clientCreatedAt']) ?? DateTime.now();
     final pending = doc.metadata.hasPendingWrites;
     MessageStatus status;
     switch (d['status']) {
@@ -247,8 +252,11 @@ class ChatMessage {
       receiverId: d['receiverId'] as String?,
       type: messageTypeFrom(d['type'] as String?),
       text: (d['text'] as String?) ?? '',
-      attachment: att is Map ? Attachment.fromMap(att.cast<String, dynamic>()) : null,
-      replyTo: reply is Map ? ReplyInfo.fromMap(reply.cast<String, dynamic>()) : null,
+      attachment:
+          att is Map ? Attachment.fromMap(att.cast<String, dynamic>()) : null,
+      replyTo: reply is Map
+          ? ReplyInfo.fromMap(reply.cast<String, dynamic>())
+          : null,
       forwarded: d['forwarded'] == true,
       edited: d['edited'] == true,
       deleted: d['deleted'] == true,
@@ -296,7 +304,8 @@ class OutgoingMessage {
     this.error,
   });
 
-  OutgoingMessage copyWith({double? progress, bool? failed, String? error}) => OutgoingMessage(
+  OutgoingMessage copyWith({double? progress, bool? failed, String? error}) =>
+      OutgoingMessage(
         id: id,
         chatId: chatId,
         type: type,

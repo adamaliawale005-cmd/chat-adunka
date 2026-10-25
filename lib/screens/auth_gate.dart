@@ -41,9 +41,11 @@ class AuthGate extends StatelessWidget {
             final profile = profileSnap.data;
             if (profile == null) return const SplashScreen();
             if (!profile.hasProfile) {
-              return ProfileEditScreen(authUser: user, existing: null, isFirstSetup: true);
+              return ProfileEditScreen(
+                  authUser: user, existing: null, isFirstSetup: true);
             }
-            return HomeScreen(key: ValueKey('home-${user.uid}'), me: profile, authUser: user);
+            return HomeScreen(
+                key: ValueKey('home-${user.uid}'), me: profile, authUser: user);
           },
         );
       },

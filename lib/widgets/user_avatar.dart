@@ -49,7 +49,8 @@ class Avatar extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final bytes = decodePhoto(photoBase64);
     final trimmed = name.trim();
-    final initial = trimmed.isEmpty ? '' : trimmed.characters.first.toUpperCase();
+    final initial =
+        trimmed.isEmpty ? '' : trimmed.characters.first.toUpperCase();
     final avatar = CircleAvatar(
       radius: radius,
       backgroundColor: scheme.primaryContainer,
@@ -59,7 +60,9 @@ class Avatar extends StatelessWidget {
           ? null
           : (initial.isEmpty || fallbackIcon != null)
               ? Icon(fallbackIcon ?? Icons.person, size: radius)
-              : Text(initial, style: TextStyle(fontSize: radius * 0.8, fontWeight: FontWeight.w600)),
+              : Text(initial,
+                  style: TextStyle(
+                      fontSize: radius * 0.8, fontWeight: FontWeight.w600)),
     );
     if (!online) return avatar;
     return Stack(
@@ -74,7 +77,8 @@ class Avatar extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.green,
               shape: BoxShape.circle,
-              border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 2),
+              border: Border.all(
+                  color: Theme.of(context).scaffoldBackgroundColor, width: 2),
             ),
           ),
         ),
@@ -89,7 +93,11 @@ class UserAvatar extends StatelessWidget {
   final double radius;
   final bool showOnline;
 
-  const UserAvatar({super.key, required this.uid, this.radius = 22, this.showOnline = false});
+  const UserAvatar(
+      {super.key,
+      required this.uid,
+      this.radius = 22,
+      this.showOnline = false});
 
   @override
   Widget build(BuildContext context) {
@@ -102,7 +110,8 @@ class UserAvatar extends StatelessWidget {
           photoBase64: u?.photoBase64,
           name: u?.displayName ?? '',
           radius: radius,
-          fallbackIcon: u != null && !u.exists ? Icons.person_off_outlined : null,
+          fallbackIcon:
+              u != null && !u.exists ? Icons.person_off_outlined : null,
           online: showOnline && (u?.isOnlineNow ?? false),
         );
       },
@@ -137,7 +146,8 @@ class UserName extends StatelessWidget {
             : !u.hasProfile
                 ? deletedLabel
                 : (format?.call(u) ?? u.displayName);
-        return Text(text, style: style, maxLines: 1, overflow: TextOverflow.ellipsis);
+        return Text(text,
+            style: style, maxLines: 1, overflow: TextOverflow.ellipsis);
       },
     );
   }

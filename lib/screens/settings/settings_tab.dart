@@ -42,7 +42,9 @@ class SettingsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(listenable: AppSettings.instance, builder: (context, _) => _build(context));
+    return ListenableBuilder(
+        listenable: AppSettings.instance,
+        builder: (context, _) => _build(context));
   }
 
   Widget _build(BuildContext context) {
@@ -59,22 +61,29 @@ class SettingsTab extends StatelessWidget {
       children: [
         ListTile(
           contentPadding: const EdgeInsets.all(16),
-          leading: Avatar(photoBase64: me.photoBase64, name: me.displayName, radius: 32),
-          title: Text(me.displayName, style: Theme.of(context).textTheme.titleLarge),
+          leading: Avatar(
+              photoBase64: me.photoBase64, name: me.displayName, radius: 32),
+          title: Text(me.displayName,
+              style: Theme.of(context).textTheme.titleLarge),
           subtitle: Text(
-            [if (me.username != null) '@${me.username}', if (me.about.isNotEmpty) me.about].join('\n'),
+            [
+              if (me.username != null) '@${me.username}',
+              if (me.about.isNotEmpty) me.about
+            ].join('\n'),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
           trailing: const Icon(Icons.edit_outlined),
-          onTap: () => _push(context, ProfileEditScreen(authUser: authUser, existing: me)),
+          onTap: () => _push(
+              context, ProfileEditScreen(authUser: authUser, existing: me)),
         ),
         const Divider(),
         ListTile(
           leading: const Icon(Icons.key_outlined),
           title: Text(context.tr('account')),
           subtitle: Text(context.tr('account_subtitle')),
-          onTap: () => _push(context, AccountScreen(authUser: authUser, me: me)),
+          onTap: () =>
+              _push(context, AccountScreen(authUser: authUser, me: me)),
         ),
         ListTile(
           leading: const Icon(Icons.lock_outline),
@@ -86,7 +95,8 @@ class SettingsTab extends StatelessWidget {
           leading: const Icon(Icons.notifications_outlined),
           title: Text(context.tr('notifications')),
           subtitle: Text(context.tr('notifications_subtitle')),
-          onTap: () => _push(context, NotificationSettingsScreen(authUser: authUser)),
+          onTap: () =>
+              _push(context, NotificationSettingsScreen(authUser: authUser)),
         ),
         ListTile(
           leading: const Icon(Icons.dark_mode_outlined),
@@ -108,8 +118,10 @@ class SettingsTab extends StatelessWidget {
         ),
         const Divider(),
         ListTile(
-          leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
-          title: Text(context.tr('sign_out'), style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          leading:
+              Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
+          title: Text(context.tr('sign_out'),
+              style: TextStyle(color: Theme.of(context).colorScheme.error)),
           onTap: () => _signOut(context),
         ),
         const SizedBox(height: 24),

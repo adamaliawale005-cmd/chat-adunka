@@ -14,7 +14,8 @@ class SetupRequiredScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
-          Icon(Icons.cloud_off, size: 64, color: Theme.of(context).colorScheme.primary),
+          Icon(Icons.cloud_off,
+              size: 64, color: Theme.of(context).colorScheme.primary),
           const SizedBox(height: 16),
           Text(
             context.tr(error == null ? 'setup_not_connected' : 'setup_failed'),
@@ -25,7 +26,8 @@ class SetupRequiredScreen extends StatelessWidget {
           Text(context.tr('setup_explanation'), textAlign: TextAlign.center),
           if (error != null) ...[
             const SizedBox(height: 16),
-            SelectableText('$error', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            SelectableText('$error',
+                style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ],
         ],
       ),

@@ -23,7 +23,8 @@ class AduChatApp extends StatelessWidget {
       listenable: AppSettings.instance,
       builder: (context, _) {
         final settings = AppSettings.instance;
-        final signedIn = firebaseReady && FirebaseAuth.instance.currentUser != null;
+        final signedIn =
+            firebaseReady && FirebaseAuth.instance.currentUser != null;
         return MaterialApp(
           title: 'AduChat',
           debugShowCheckedModeBanner: false,
@@ -35,10 +36,12 @@ class AduChatApp extends StatelessWidget {
           locale: settings.locale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
-          localeResolutionCallback: (device, supported) => AppLocalizations.resolve(device, supported),
+          localeResolutionCallback: (device, supported) =>
+              AppLocalizations.resolve(device, supported),
           home: signedIn
               ? const AuthGate()
-              : WelcomeScreen(firebaseReady: firebaseReady, firebaseError: firebaseError),
+              : WelcomeScreen(
+                  firebaseReady: firebaseReady, firebaseError: firebaseError),
         );
       },
     );

@@ -41,7 +41,8 @@ class _MessageSearchScreenState extends State<MessageSearchScreen> {
       }
       setState(() => _loading = true);
       try {
-        final r = await ChatService.instance.search(widget.chat.id, q, widget.me);
+        final r =
+            await ChatService.instance.search(widget.chat.id, q, widget.me);
         if (mounted && _query.text == q) setState(() => _results = r);
       } catch (_) {
         if (mounted) setState(() => _results = const []);
@@ -72,9 +73,11 @@ class _MessageSearchScreenState extends State<MessageSearchScreen> {
       body: _loading
           ? const LoadingView()
           : _results == null
-              ? EmptyState(icon: Icons.search, title: context.tr('search_messages_hint'))
+              ? EmptyState(
+                  icon: Icons.search, title: context.tr('search_messages_hint'))
               : _results!.isEmpty
-                  ? EmptyState(icon: Icons.search_off, title: context.tr('no_results'))
+                  ? EmptyState(
+                      icon: Icons.search_off, title: context.tr('no_results'))
                   : ListView.separated(
                       itemCount: _results!.length,
                       separatorBuilder: (_, __) => const Divider(height: 1),
@@ -84,9 +87,13 @@ class _MessageSearchScreenState extends State<MessageSearchScreen> {
                           leading: UserAvatar(uid: m.senderId, radius: 18),
                           title: m.senderId == widget.me
                               ? Text(context.tr('you'))
-                              : UserName(uid: m.senderId, deletedLabel: context.tr('deleted_account')),
+                              : UserName(
+                                  uid: m.senderId,
+                                  deletedLabel: context.tr('deleted_account')),
                           subtitle: Text(
-                            m.text.isNotEmpty ? m.text : (m.attachment?.name ?? ''),
+                            m.text.isNotEmpty
+                                ? m.text
+                                : (m.attachment?.name ?? ''),
                             maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                           ),

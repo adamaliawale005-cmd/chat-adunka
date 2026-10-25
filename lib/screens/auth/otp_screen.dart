@@ -15,7 +15,11 @@ class OtpScreen extends StatefulWidget {
   final String verificationId;
   final int? resendToken;
 
-  const OtpScreen({super.key, required this.phoneNumber, required this.verificationId, this.resendToken});
+  const OtpScreen(
+      {super.key,
+      required this.phoneNumber,
+      required this.verificationId,
+      this.resendToken});
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -64,7 +68,8 @@ class _OtpScreenState extends State<OtpScreen> {
       _error = null;
     });
     try {
-      await AuthService.instance.verifyCode(verificationId: _verificationId, smsCode: code);
+      await AuthService.instance
+          .verifyCode(verificationId: _verificationId, smsCode: code);
       if (mounted) goToAuthGate(context);
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
@@ -114,7 +119,7 @@ class _OtpScreenState extends State<OtpScreen> {
           padding: const EdgeInsets.all(24),
           children: [
             Text(
-              context.tr('code_sent_to', {'phone': '⁦${widget.phoneNumber}⁩'}),
+              context.tr('code_sent_to', {'phone': '\u2066${widget.phoneNumber}\u2069'}),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -130,7 +135,8 @@ class _OtpScreenState extends State<OtpScreen> {
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 28, letterSpacing: 12),
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: InputDecoration(counterText: '', errorText: _error, errorMaxLines: 5),
+                decoration: InputDecoration(
+                    counterText: '', errorText: _error, errorMaxLines: 5),
                 onChanged: (v) {
                   if (v.length == 6) _verify();
                 },

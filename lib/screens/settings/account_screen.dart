@@ -32,7 +32,8 @@ class _AccountScreenState extends State<AccountScreen> {
           title: Text(ctx.tr('delete_account')),
           content: Text(ctx.tr('delete_needs_recent_login')),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(ctx.tr('ok'))),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx), child: Text(ctx.tr('ok'))),
           ],
         ),
       );
@@ -48,14 +49,19 @@ class _AccountScreenState extends State<AccountScreen> {
           const SizedBox(height: 12),
           TextField(
             controller: confirmText,
-            decoration: InputDecoration(labelText: ctx.tr('type_delete_to_confirm')),
+            decoration:
+                InputDecoration(labelText: ctx.tr('type_delete_to_confirm')),
           ),
         ]),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(ctx.tr('cancel'))),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, confirmText.text.trim().toUpperCase() == 'DELETE'),
-            child: Text(ctx.tr('delete'), style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(ctx.tr('cancel'))),
+          TextButton(
+            onPressed: () => Navigator.pop(
+                ctx, confirmText.text.trim().toUpperCase() == 'DELETE'),
+            child: Text(ctx.tr('delete'),
+                style: TextStyle(color: Theme.of(ctx).colorScheme.error)),
           ),
         ],
       ),
@@ -94,7 +100,8 @@ class _AccountScreenState extends State<AccountScreen> {
               ListTile(
                 leading: const Icon(Icons.phone),
                 title: Text(context.tr('phone_number')),
-                subtitle: Text(u.phoneNumber!, textDirection: TextDirection.ltr),
+                subtitle:
+                    Text(u.phoneNumber!, textDirection: TextDirection.ltr),
               ),
             if (u.email != null)
               ListTile(
@@ -106,10 +113,14 @@ class _AccountScreenState extends State<AccountScreen> {
                     : TextButton(
                         onPressed: () async {
                           try {
-                            await AuthService.instance.resendEmailVerification();
-                            if (context.mounted) showSnack(context, context.tr('verification_sent'));
+                            await AuthService.instance
+                                .resendEmailVerification();
+                            if (context.mounted)
+                              showSnack(
+                                  context, context.tr('verification_sent'));
                           } catch (_) {
-                            if (context.mounted) showSnack(context, context.tr('action_failed'));
+                            if (context.mounted)
+                              showSnack(context, context.tr('action_failed'));
                           }
                         },
                         child: Text(context.tr('verify')),
@@ -118,10 +129,12 @@ class _AccountScreenState extends State<AccountScreen> {
             ListTile(
               leading: const Icon(Icons.alternate_email),
               title: Text(context.tr('username')),
-              subtitle: Text(widget.me.username != null ? '@${widget.me.username}' : '—'),
+              subtitle: Text(
+                  widget.me.username != null ? '@${widget.me.username}' : '—'),
               trailing: const Icon(Icons.edit_outlined),
               onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => ProfileEditScreen(authUser: u, existing: widget.me),
+                builder: (_) =>
+                    ProfileEditScreen(authUser: u, existing: widget.me),
               )),
             ),
             if (u.email != null)
@@ -131,16 +144,20 @@ class _AccountScreenState extends State<AccountScreen> {
                 onTap: () async {
                   try {
                     await AuthService.instance.sendPasswordReset(u.email!);
-                    if (context.mounted) showSnack(context, context.tr('reset_email_sent'));
+                    if (context.mounted)
+                      showSnack(context, context.tr('reset_email_sent'));
                   } catch (_) {
-                    if (context.mounted) showSnack(context, context.tr('action_failed'));
+                    if (context.mounted)
+                      showSnack(context, context.tr('action_failed'));
                   }
                 },
               ),
             const Divider(),
             ListTile(
-              leading: Icon(Icons.delete_forever_outlined, color: Theme.of(context).colorScheme.error),
-              title: Text(context.tr('delete_account'), style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              leading: Icon(Icons.delete_forever_outlined,
+                  color: Theme.of(context).colorScheme.error),
+              title: Text(context.tr('delete_account'),
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
               subtitle: Text(context.tr('delete_account_subtitle')),
               onTap: _delete,
             ),

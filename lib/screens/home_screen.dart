@@ -36,8 +36,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final List<StreamSubscription> _subs = [];
   Timer? _heartbeat;
   bool _incomingOpen = false;
-  late final Stream<List<Chat>> _chats = ChatService.instance.watchChats(_uid).asBroadcastStream();
-  late final Stream<List<CallLogEntry>> _history = CallService.instance.watchHistory(_uid);
+  late final Stream<List<Chat>> _chats =
+      ChatService.instance.watchChats(_uid).asBroadcastStream();
+  late final Stream<List<CallLogEntry>> _history =
+      CallService.instance.watchHistory(_uid);
 
   String get _uid => widget.authUser.uid;
 
@@ -52,19 +54,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       NotificationService.instance.prefs = p;
       UserService.instance.setShowLastSeen(p.showLastSeen);
     }, onError: (_) {}));
-    _subs.add(UserService.instance.watchBlocked(_uid).listen((b) => Session.blocked.value = b, onError: (_) {}));
+    _subs.add(UserService.instance
+        .watchBlocked(_uid)
+        .listen((b) => Session.blocked.value = b, onError: (_) {}));
 
     // Delivery receipts and in-app notifications for new messages.
     _subs.add(_chats.listen((chats) {
-      final pending = chats.where((c) => !c.isGroup && c.lastSenderId.isNotEmpty && c.lastSenderId != _uid);
+      final pending = chats.where((c) =>
+          !c.isGroup && c.lastSenderId.isNotEmpty && c.lastSenderId != _uid);
       ChatService.instance.markDelivered(_uid, pending.map((c) => c.id));
       if (mounted) {
-        NotificationService.instance.onChatsChanged(_uid, chats, tr: (k) => context.tr(k));
+        NotificationService.instance
+            .onChatsChanged(_uid, chats, tr: (k) => context.tr(k));
       }
     }, onError: (_) {}));
 
     _setOnline(true);
-    _heartbeat = Timer.periodic(const Duration(seconds: 60), (_) => _setOnline(true));
+    _heartbeat =
+        Timer.periodic(const Duration(seconds: 60), (_) => _setOnline(true));
 
     NotificationService.instance.start(_uid);
     NotificationService.instance.attach(_openPayload);
@@ -78,7 +85,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (!mounted) return;
       NotificationService.instance.showLocal(
         title: context.tr('missed_call'),
-        body: caller.hasProfile ? caller.displayName : context.tr('deleted_account'),
+        body: caller.hasProfile
+            ? caller.displayName
+            : context.tr('deleted_account'),
         payload: 'calls',
         call: true,
       );
@@ -101,18 +110,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _setOnline(true);
-    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
       _setOnline(false);
     }
   }
 
-  void _setOnline(bool online) => UserService.instance.setPresence(_uid, online: online);
+  void _setOnline(bool online) =>
+      UserService.instance.setPresence(_uid, online: online);
 
   void _showIncoming(CallDoc call) {
     if (_incomingOpen || Session.blocked.value.contains(call.callerId)) return;
     _incomingOpen = true;
     rootNavigatorKey.currentState
-        ?.push(MaterialPageRoute(builder: (_) => IncomingCallScreen(call: call, me: _uid)))
+        ?.push(MaterialPageRoute(
+            builder: (_) => IncomingCallScreen(call: call, me: _uid)))
         .whenComplete(() => _incomingOpen = false);
   }
 
@@ -122,7 +134,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (payload.startsWith('chat:')) {
       final chat = await ChatService.instance.getChat(payload.substring(5));
       if (chat == null) return;
-      nav.push(MaterialPageRoute(builder: (_) => ChatScreen(me: _uid, chat: chat)));
+      nav.push(
+          MaterialPageRoute(builder: (_) => ChatScreen(me: _uid, chat: chat)));
     } else if (payload == 'calls') {
       setState(() => _tab = 2);
     } else if (payload.startsWith('call:')) {
@@ -152,7 +165,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             title: Text(ctx.tr('new_group')),
             onTap: () {
               Navigator.pop(ctx);
-              Navigator.of(context).push(MaterialPageRoute(builder: (_) => CreateGroupScreen(me: _uid)));
+              Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => CreateGroupScreen(me: _uid)));
             },
           ),
         ]),
@@ -162,7 +176,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final titles = [context.tr('app_name'), context.tr('contacts'), context.tr('calls'), context.tr('settings')];
+    final titles = [
+      context.tr('app_name'),
+      context.tr('contacts'),
+      context.tr('calls'),
+      context.tr('settings')
+    ];
     return Scaffold(
       appBar: AppBar(title: Text(titles[_tab])),
       body: IndexedStack(
@@ -184,11 +203,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       bottomNavigationBar: StreamBuilder<List<Chat>>(
         stream: _chats,
         builder: (context, snap) {
-          final unreadChats = (snap.data ?? const <Chat>[]).where((c) => c.unreadFor(_uid) > 0).length;
+          final unreadChats = (snap.data ?? const <Chat>[])
+              .where((c) => c.unreadFor(_uid) > 0)
+              .length;
           return StreamBuilder<List<CallLogEntry>>(
             stream: _history,
             builder: (context, callSnap) {
-              final missed = (callSnap.data ?? const <CallLogEntry>[]).where((e) => e.isMissed && !e.seen).length;
+              final missed = (callSnap.data ?? const <CallLogEntry>[])
+                  .where((e) => e.isMissed && !e.seen)
+                  .length;
               return NavigationBar(
                 selectedIndex: _tab,
                 onDestinationSelected: (i) => setState(() => _tab = i),

@@ -82,10 +82,14 @@ class AttachmentService {
       );
     }
 
-    if (!storageEnabled && type != MessageType.image && type != MessageType.audio) {
+    if (!storageEnabled &&
+        type != MessageType.image &&
+        type != MessageType.audio) {
       throw const StorageNotEnabledException();
     }
-    final limit = storageEnabled ? AppConfig.storageAttachmentLimit : AppConfig.inlineAttachmentLimit;
+    final limit = storageEnabled
+        ? AppConfig.storageAttachmentLimit
+        : AppConfig.inlineAttachmentLimit;
     if (size > limit) throw AttachmentTooLargeException(size, limit);
 
     await chats.track(
@@ -123,9 +127,12 @@ class AttachmentService {
     if (storageEnabled) {
       final safeName = name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
       final path = 'chats/${chat.id}/$senderId/${id}_$safeName';
-      final task = FirebaseStorage.instance.ref(path).putData(bytes, SettableMetadata(contentType: mime));
+      final task = FirebaseStorage.instance
+          .ref(path)
+          .putData(bytes, SettableMetadata(contentType: mime));
       final sub = task.snapshotEvents.listen((s) {
-        if (s.totalBytes > 0) chats.updateProgress(chat.id, id, s.bytesTransferred / s.totalBytes);
+        if (s.totalBytes > 0)
+          chats.updateProgress(chat.id, id, s.bytesTransferred / s.totalBytes);
       });
       try {
         await task;
@@ -151,7 +158,8 @@ class AttachmentService {
         ),
       );
     } else {
-      final blobRef = _db.collection('chats').doc(chat.id).collection('blobs').doc(id);
+      final blobRef =
+          _db.collection('chats').doc(chat.id).collection('blobs').doc(id);
       await chats.send(
         chat: chat,
         senderId: senderId,
@@ -188,18 +196,26 @@ class AttachmentService {
 
   /// Loads attachment bytes (members only; enforced by the security rules).
   Future<Uint8List?> load(String chatId, Attachment a) {
-    final key = a.blobId != null ? 'b:$chatId/${a.blobId}' : 's:${a.storagePath}';
+    final key =
+        a.blobId != null ? 'b:$chatId/${a.blobId}' : 's:${a.storagePath}';
     final hit = _cache[key];
     if (hit != null) return Future.value(hit);
     return _inflight.putIfAbsent(key, () async {
       try {
         Uint8List? bytes;
         if (a.blobId != null) {
-          final doc = await _db.collection('chats').doc(chatId).collection('blobs').doc(a.blobId).get();
+          final doc = await _db
+              .collection('chats')
+              .doc(chatId)
+              .collection('blobs')
+              .doc(a.blobId)
+              .get();
           final data = doc.data()?['data'];
           if (data is String) bytes = base64Decode(data);
         } else if (a.storagePath != null) {
-          bytes = await FirebaseStorage.instance.ref(a.storagePath).getData(AppConfig.storageAttachmentLimit);
+          bytes = await FirebaseStorage.instance
+              .ref(a.storagePath)
+              .getData(AppConfig.storageAttachmentLimit);
         }
         if (bytes != null) _remember(key, bytes);
         return bytes;

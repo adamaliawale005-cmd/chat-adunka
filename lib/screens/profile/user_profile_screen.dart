@@ -17,7 +17,8 @@ class UserProfileScreen extends StatelessWidget {
   final String me;
   final String uid;
   final bool fromChat;
-  const UserProfileScreen({super.key, required this.me, required this.uid, this.fromChat = false});
+  const UserProfileScreen(
+      {super.key, required this.me, required this.uid, this.fromChat = false});
 
   Future<void> _toggleBlock(BuildContext context, bool blocked) async {
     try {
@@ -51,7 +52,9 @@ class UserProfileScreen extends StatelessWidget {
           final u = snap.data;
           if (u == null) return const LoadingView();
           if (!u.hasProfile) {
-            return EmptyState(icon: Icons.person_off_outlined, title: context.tr('deleted_account'));
+            return EmptyState(
+                icon: Icons.person_off_outlined,
+                title: context.tr('deleted_account'));
           }
           return ValueListenableBuilder<Set<String>>(
             valueListenable: Session.blocked,
@@ -60,16 +63,26 @@ class UserProfileScreen extends StatelessWidget {
               return ListView(
                 padding: const EdgeInsets.symmetric(vertical: 24),
                 children: [
-                  Center(child: Avatar(photoBase64: u.photoBase64, name: u.displayName, radius: 64)),
+                  Center(
+                      child: Avatar(
+                          photoBase64: u.photoBase64,
+                          name: u.displayName,
+                          radius: 64)),
                   const SizedBox(height: 16),
-                  Center(child: Text(u.displayName, style: Theme.of(context).textTheme.headlineSmall)),
+                  Center(
+                      child: Text(u.displayName,
+                          style: Theme.of(context).textTheme.headlineSmall)),
                   if (u.username != null)
-                    Center(child: Text('@${u.username}', textDirection: TextDirection.ltr)),
+                    Center(
+                        child: Text('@${u.username}',
+                            textDirection: TextDirection.ltr)),
                   const SizedBox(height: 4),
                   if (!blocked)
                     Center(
                       child: Text(
-                        u.isOnlineNow ? context.tr('online') : formatLastSeen(u.lastSeen, context.tr, locale),
+                        u.isOnlineNow
+                            ? context.tr('online')
+                            : formatLastSeen(u.lastSeen, context.tr, locale),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ),
@@ -99,12 +112,14 @@ class UserProfileScreen extends StatelessWidget {
                         _Action(
                           icon: Icons.call_outlined,
                           label: context.tr('voice_call'),
-                          onTap: () => startCall(context, me: me, peer: uid, kind: CallKind.audio),
+                          onTap: () => startCall(context,
+                              me: me, peer: uid, kind: CallKind.audio),
                         ),
                         _Action(
                           icon: Icons.videocam_outlined,
                           label: context.tr('video_call'),
-                          onTap: () => startCall(context, me: me, peer: uid, kind: CallKind.video),
+                          onTap: () => startCall(context,
+                              me: me, peer: uid, kind: CallKind.video),
                         ),
                       ],
                     ),
@@ -112,14 +127,17 @@ class UserProfileScreen extends StatelessWidget {
                   if (uid != me) ...[
                     const Divider(),
                     ListTile(
-                      leading: Icon(blocked ? Icons.lock_open : Icons.block, color: Theme.of(context).colorScheme.error),
+                      leading: Icon(blocked ? Icons.lock_open : Icons.block,
+                          color: Theme.of(context).colorScheme.error),
                       title: Text(context.tr(blocked ? 'unblock' : 'block')),
                       onTap: () => _toggleBlock(context, blocked),
                     ),
                     ListTile(
-                      leading: Icon(Icons.flag_outlined, color: Theme.of(context).colorScheme.error),
+                      leading: Icon(Icons.flag_outlined,
+                          color: Theme.of(context).colorScheme.error),
                       title: Text(context.tr('report')),
-                      onTap: () => showReportDialog(context, reporter: me, reported: uid),
+                      onTap: () => showReportDialog(context,
+                          reporter: me, reported: uid),
                     ),
                   ],
                 ],
@@ -142,7 +160,8 @@ class _Action extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Column(children: [
-          IconButton.filledTonal(onPressed: onTap, icon: Icon(icon), iconSize: 28),
+          IconButton.filledTonal(
+              onPressed: onTap, icon: Icon(icon), iconSize: 28),
           const SizedBox(height: 4),
           Text(label, style: Theme.of(context).textTheme.bodySmall),
         ]),

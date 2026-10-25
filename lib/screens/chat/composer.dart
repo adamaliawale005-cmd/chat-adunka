@@ -68,7 +68,8 @@ class _ComposerState extends State<Composer> {
       _text.clear();
       _hasText = false;
     }
-    if (widget.replyTo != null && widget.replyTo != old.replyTo) _focus.requestFocus();
+    if (widget.replyTo != null && widget.replyTo != old.replyTo)
+      _focus.requestFocus();
   }
 
   @override
@@ -118,7 +119,8 @@ class _ComposerState extends State<Composer> {
 
   // ---------- attachments ----------
 
-  Future<void> _sendFile(MessageType type, File file, String name, {int? durationMs}) async {
+  Future<void> _sendFile(MessageType type, File file, String name,
+      {int? durationMs}) async {
     final reply = widget.replyTo;
     widget.onCancelReply();
     try {
@@ -134,7 +136,8 @@ class _ComposerState extends State<Composer> {
       );
     } on AttachmentTooLargeException catch (e) {
       if (mounted) {
-        showSnack(context, context.tr('file_too_large', {'limit': formatBytes(e.limit)}));
+        showSnack(context,
+            context.tr('file_too_large', {'limit': formatBytes(e.limit)}));
       }
     } on StorageNotEnabledException {
       if (mounted) showSnack(context, context.tr('storage_required'));
@@ -156,7 +159,8 @@ class _ComposerState extends State<Composer> {
   }
 
   Future<void> _pickVideo() async {
-    final x = await ImagePicker().pickVideo(source: ImageSource.gallery, maxDuration: const Duration(minutes: 5));
+    final x = await ImagePicker().pickVideo(
+        source: ImageSource.gallery, maxDuration: const Duration(minutes: 5));
     if (x == null) return;
     await _sendFile(MessageType.video, File(x.path), x.name);
   }
@@ -227,9 +231,14 @@ class _ComposerState extends State<Composer> {
         return;
       }
       final dir = await getTemporaryDirectory();
-      final path = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      final path =
+          '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
       await rec.start(
-        const RecordConfig(encoder: AudioEncoder.aacLc, bitRate: 32000, sampleRate: 22050, numChannels: 1),
+        const RecordConfig(
+            encoder: AudioEncoder.aacLc,
+            bitRate: 32000,
+            sampleRate: 22050,
+            numChannels: 1),
         path: path,
       );
       setState(() {
@@ -265,7 +274,8 @@ class _ComposerState extends State<Composer> {
       }
       final path = await rec.stop();
       if (path == null || duration < const Duration(milliseconds: 800)) return;
-      await _sendFile(MessageType.audio, File(path), 'voice.m4a', durationMs: duration.inMilliseconds);
+      await _sendFile(MessageType.audio, File(path), 'voice.m4a',
+          durationMs: duration.inMilliseconds);
     } finally {
       await rec.dispose();
     }
@@ -292,13 +302,17 @@ class _ComposerState extends State<Composer> {
             else if (widget.replyTo != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
-                child: ReplyQuote(reply: widget.replyTo!, me: widget.me, onClose: widget.onCancelReply),
+                child: ReplyQuote(
+                    reply: widget.replyTo!,
+                    me: widget.me,
+                    onClose: widget.onCancelReply),
               ),
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 4, 4, 6),
               child: recording ? _recordingRow(theme) : _inputRow(theme),
             ),
-            if (_emoji && !recording) SizedBox(height: 260, child: EmojiPanel(onPick: _insertEmoji)),
+            if (_emoji && !recording)
+              SizedBox(height: 260, child: EmojiPanel(onPick: _insertEmoji)),
           ],
         ),
       ),
@@ -333,8 +347,11 @@ class _ComposerState extends State<Composer> {
               counterText: '',
               filled: true,
               isDense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(22), borderSide: BorderSide.none),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(22),
+                  borderSide: BorderSide.none),
             ),
           ),
         ),
@@ -375,7 +392,8 @@ class _ComposerState extends State<Composer> {
       const SizedBox(width: 8),
       Expanded(
         child: Text(
-          context.tr('recording_limit', {'minutes': AppConfig.maxVoiceNote.inMinutes}),
+          context.tr(
+              'recording_limit', {'minutes': AppConfig.maxVoiceNote.inMinutes}),
           style: theme.textTheme.bodySmall,
           overflow: TextOverflow.ellipsis,
         ),
@@ -394,7 +412,11 @@ class _Bar extends StatelessWidget {
   final String title;
   final String text;
   final VoidCallback onClose;
-  const _Bar({required this.icon, required this.title, required this.text, required this.onClose});
+  const _Bar(
+      {required this.icon,
+      required this.title,
+      required this.text,
+      required this.onClose});
 
   @override
   Widget build(BuildContext context) {
@@ -410,8 +432,12 @@ class _Bar extends StatelessWidget {
         Icon(icon, size: 18, color: theme.colorScheme.primary),
         const SizedBox(width: 8),
         Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w600)),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title,
+                style: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600)),
             Text(text, maxLines: 1, overflow: TextOverflow.ellipsis),
           ]),
         ),

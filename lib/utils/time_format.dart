@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart';
 
-bool _sameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
+bool _sameDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
 
 /// Date formats for languages without bundled date data fall back to English.
 String _safe(String locale) {
@@ -18,20 +19,24 @@ String formatListTime(DateTime t, Tr tr, String locale) {
   final local = t.toLocal();
   final now = DateTime.now();
   if (_sameDay(local, now)) return DateFormat.Hm(_safe(locale)).format(local);
-  if (_sameDay(local, now.subtract(const Duration(days: 1)))) return tr('yesterday');
-  if (now.difference(local).inDays < 7) return DateFormat.E(_safe(locale)).format(local);
+  if (_sameDay(local, now.subtract(const Duration(days: 1))))
+    return tr('yesterday');
+  if (now.difference(local).inDays < 7)
+    return DateFormat.E(_safe(locale)).format(local);
   return DateFormat.yMd(_safe(locale)).format(local);
 }
 
 /// Time shown inside each message bubble.
-String formatMessageTime(DateTime t, String locale) => DateFormat.Hm(_safe(locale)).format(t.toLocal());
+String formatMessageTime(DateTime t, String locale) =>
+    DateFormat.Hm(_safe(locale)).format(t.toLocal());
 
 /// Day separator label in a conversation.
 String formatDayHeader(DateTime t, Tr tr, String locale) {
   final local = t.toLocal();
   final now = DateTime.now();
   if (_sameDay(local, now)) return tr('today');
-  if (_sameDay(local, now.subtract(const Duration(days: 1)))) return tr('yesterday');
+  if (_sameDay(local, now.subtract(const Duration(days: 1))))
+    return tr('yesterday');
   return DateFormat.yMMMMEEEEd(_safe(locale)).format(local);
 }
 
@@ -46,8 +51,10 @@ String formatLastSeen(DateTime? t, Tr tr, String locale) {
   final now = DateTime.now();
   final time = DateFormat.Hm(_safe(locale)).format(local);
   if (_sameDay(local, now)) return tr('last_seen_today', {'time': time});
-  if (_sameDay(local, now.subtract(const Duration(days: 1)))) return tr('last_seen_yesterday', {'time': time});
-  return tr('last_seen_date', {'date': DateFormat.yMMMd(_safe(locale)).format(local)});
+  if (_sameDay(local, now.subtract(const Duration(days: 1))))
+    return tr('last_seen_yesterday', {'time': time});
+  return tr('last_seen_date',
+      {'date': DateFormat.yMMMd(_safe(locale)).format(local)});
 }
 
 String formatDuration(Duration d) {

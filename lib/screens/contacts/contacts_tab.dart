@@ -53,7 +53,8 @@ class _ContactsTabState extends State<ContactsTab> {
     setState(() => _searching = true);
     _debounce = Timer(const Duration(milliseconds: 450), () async {
       try {
-        final r = await searchPeople(q, me: widget.me, myPhone: widget.authUser.phoneNumber);
+        final r = await searchPeople(q,
+            me: widget.me, myPhone: widget.authUser.phoneNumber);
         if (mounted && _search.text == q) setState(() => _results = r);
       } catch (_) {
         if (mounted) setState(() => _results = const []);
@@ -74,13 +75,16 @@ class _ContactsTabState extends State<ContactsTab> {
         cancelLabel: context.tr('not_now'),
       );
       if (!ok) return;
-      await UserService.instance.updatePrivate(widget.authUser, settings.copyWith(contactSync: true));
+      await UserService.instance
+          .updatePrivate(widget.authUser, settings.copyWith(contactSync: true));
     }
     setState(() => _syncing = true);
     try {
-      final m = await ContactsService.instance.sync(myUid: widget.me, myPhone: widget.authUser.phoneNumber);
+      final m = await ContactsService.instance
+          .sync(myUid: widget.me, myPhone: widget.authUser.phoneNumber);
       if (mounted) setState(() => _matches = m);
-      if (mounted && m.isEmpty) showSnack(context, context.tr('no_contacts_found'));
+      if (mounted && m.isEmpty)
+        showSnack(context, context.tr('no_contacts_found'));
     } on ContactsPermissionDenied {
       if (mounted) showSnack(context, context.tr('contacts_permission_denied'));
     } catch (_) {
@@ -105,7 +109,8 @@ class _ContactsTabState extends State<ContactsTab> {
           leading: UserAvatar(uid: uid, showOnline: true),
           title: Text(u?.displayName ?? ''),
           subtitle: Text(
-            subtitle ?? (u?.username != null ? '@${u!.username}' : (u?.about ?? '')),
+            subtitle ??
+                (u?.username != null ? '@${u!.username}' : (u?.about ?? '')),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -160,18 +165,24 @@ class _ContactsTabState extends State<ContactsTab> {
                     ),
                     ListTile(
                       leading: CircleAvatar(
-                        child: _syncing ? const ButtonSpinner() : const Icon(Icons.contacts),
+                        child: _syncing
+                            ? const ButtonSpinner()
+                            : const Icon(Icons.contacts),
                       ),
-                      title: Text(context.tr(syncEnabled ? 'refresh_contacts' : 'find_contacts_title')),
+                      title: Text(context.tr(syncEnabled
+                          ? 'refresh_contacts'
+                          : 'find_contacts_title')),
                       subtitle: Text(context.tr('find_contacts_subtitle')),
                       onTap: _syncing ? null : _sync,
                     ),
                     if (_matches.isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-                        child: Text(context.tr('contacts_on_aduchat'), style: Theme.of(context).textTheme.titleSmall),
+                        child: Text(context.tr('contacts_on_aduchat'),
+                            style: Theme.of(context).textTheme.titleSmall),
                       ),
-                      for (final m in _matches) _personTile(m.uid, subtitle: m.contactName),
+                      for (final m in _matches)
+                        _personTile(m.uid, subtitle: m.contactName),
                     ] else
                       Padding(
                         padding: const EdgeInsets.all(32),

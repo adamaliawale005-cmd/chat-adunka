@@ -19,7 +19,8 @@ class UserService {
   static final UserService instance = UserService._();
 
   FirebaseFirestore get _db => FirebaseFirestore.instance;
-  CollectionReference<Map<String, dynamic>> get _users => _db.collection('users');
+  CollectionReference<Map<String, dynamic>> get _users =>
+      _db.collection('users');
   DocumentReference<Map<String, dynamic>> _private(String uid) =>
       _users.doc(uid).collection('private').doc('account');
 
@@ -145,7 +146,8 @@ class UserService {
     await _applyIndexes(authUser, private, name, uname);
   }
 
-  Future<void> _applyIndexes(User authUser, AccountPrivate p, String name, String username) async {
+  Future<void> _applyIndexes(
+      User authUser, AccountPrivate p, String name, String username) async {
     final uid = authUser.uid;
     final phone = authUser.phoneNumber;
     if (phone != null && phone.isNotEmpty) {
@@ -177,7 +179,8 @@ class UserService {
     await _private(authUser.uid).set(settings.toMap(), SetOptions(merge: true));
     final me = await getUser(authUser.uid);
     if (me.hasProfile) {
-      await _applyIndexes(authUser, settings, me.displayName, me.username ?? '');
+      await _applyIndexes(
+          authUser, settings, me.displayName, me.username ?? '');
     }
     if (!settings.showLastSeen) {
       await _ignoreErrors(_users.doc(authUser.uid).update({
@@ -221,8 +224,16 @@ class UserService {
     final end = '$q';
     final dir = _db.collection('directory');
     final results = await Future.wait([
-      dir.where('usernameLower', isGreaterThanOrEqualTo: q).where('usernameLower', isLessThan: end).limit(limit).get(),
-      dir.where('displayNameLower', isGreaterThanOrEqualTo: q).where('displayNameLower', isLessThan: end).limit(limit).get(),
+      dir
+          .where('usernameLower', isGreaterThanOrEqualTo: q)
+          .where('usernameLower', isLessThan: end)
+          .limit(limit)
+          .get(),
+      dir
+          .where('displayNameLower', isGreaterThanOrEqualTo: q)
+          .where('displayNameLower', isLessThan: end)
+          .limit(limit)
+          .get(),
     ]);
     final ids = <String>{};
     for (final r in results) {
@@ -241,7 +252,8 @@ class UserService {
       .snapshots()
       .map((s) => s.docs.map((d) => d.id).toSet());
 
-  Future<void> block(String me, String other) => _users.doc(me).collection('blocked').doc(other).set({
+  Future<void> block(String me, String other) =>
+      _users.doc(me).collection('blocked').doc(other).set({
         'uid': other,
         'createdAt': FieldValue.serverTimestamp(),
       });
@@ -279,7 +291,8 @@ class UserService {
     final profile = await userRef.get();
     final username = profile.data()?['username'] as String?;
 
-    Future<void> deleteCollection(CollectionReference<Map<String, dynamic>> col) async {
+    Future<void> deleteCollection(
+        CollectionReference<Map<String, dynamic>> col) async {
       while (true) {
         final page = await col.limit(200).get();
         if (page.docs.isEmpty) break;
@@ -297,7 +310,8 @@ class UserService {
     await deleteCollection(userRef.collection('calls'));
     await deleteCollection(userRef.collection('private'));
     if (authUser.phoneNumber != null) {
-      await _ignoreErrors(_db.collection('phoneIndex').doc(authUser.phoneNumber).delete());
+      await _ignoreErrors(
+          _db.collection('phoneIndex').doc(authUser.phoneNumber).delete());
     }
     if (username != null && username.isNotEmpty) {
       await _ignoreErrors(_db.collection('usernames').doc(username).delete());

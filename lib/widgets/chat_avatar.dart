@@ -10,14 +10,20 @@ class ChatAvatar extends StatelessWidget {
   final Chat chat;
   final String me;
   final double radius;
-  const ChatAvatar({super.key, required this.chat, required this.me, this.radius = 22});
+  const ChatAvatar(
+      {super.key, required this.chat, required this.me, this.radius = 22});
 
   @override
   Widget build(BuildContext context) {
     if (chat.isGroup) {
-      return Avatar(photoBase64: chat.photoBase64, name: chat.name, radius: radius, fallbackIcon: Icons.groups);
+      return Avatar(
+          photoBase64: chat.photoBase64,
+          name: chat.name,
+          radius: radius,
+          fallbackIcon: Icons.groups);
     }
-    return UserAvatar(uid: chat.otherMember(me), radius: radius, showOnline: true);
+    return UserAvatar(
+        uid: chat.otherMember(me), radius: radius, showOnline: true);
   }
 }
 
@@ -26,7 +32,8 @@ class UserNameMatcher extends StatelessWidget {
   final String uid;
   final String query;
   final Widget child;
-  const UserNameMatcher({super.key, required this.uid, required this.query, required this.child});
+  const UserNameMatcher(
+      {super.key, required this.uid, required this.query, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +43,8 @@ class UserNameMatcher extends StatelessWidget {
       builder: (context, snap) {
         final u = snap.data;
         if (u == null) return const SizedBox.shrink();
-        final match = u.displayName.toLowerCase().contains(query) || (u.username ?? '').contains(query);
+        final match = u.displayName.toLowerCase().contains(query) ||
+            (u.username ?? '').contains(query);
         return match ? child : const SizedBox.shrink();
       },
     );

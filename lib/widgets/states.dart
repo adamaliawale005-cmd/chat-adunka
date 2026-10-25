@@ -7,7 +7,12 @@ class EmptyState extends StatelessWidget {
   final String? message;
   final Widget? action;
 
-  const EmptyState({super.key, required this.icon, required this.title, this.message, this.action});
+  const EmptyState(
+      {super.key,
+      required this.icon,
+      required this.title,
+      this.message,
+      this.action});
 
   @override
   Widget build(BuildContext context) {
@@ -18,14 +23,19 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 64, color: theme.colorScheme.primary.withValues(alpha: 0.6)),
+            Icon(icon,
+                size: 64,
+                color: theme.colorScheme.primary.withValues(alpha: 0.6)),
             const SizedBox(height: 16),
-            Text(title, style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
+            Text(title,
+                style: theme.textTheme.titleMedium,
+                textAlign: TextAlign.center),
             if (message != null) ...[
               const SizedBox(height: 8),
               Text(
                 message!,
-                style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -44,7 +54,12 @@ class ErrorView extends StatelessWidget {
   final VoidCallback? onRetry;
   final String retryLabel;
 
-  const ErrorView({super.key, required this.message, this.details, this.onRetry, this.retryLabel = 'Retry'});
+  const ErrorView(
+      {super.key,
+      required this.message,
+      this.details,
+      this.onRetry,
+      this.retryLabel = 'Retry'});
 
   @override
   Widget build(BuildContext context) {
@@ -57,14 +72,21 @@ class ErrorView extends StatelessWidget {
           children: [
             Icon(Icons.error_outline, size: 56, color: theme.colorScheme.error),
             const SizedBox(height: 12),
-            Text(message, style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
+            Text(message,
+                style: theme.textTheme.titleMedium,
+                textAlign: TextAlign.center),
             if (details != null) ...[
               const SizedBox(height: 8),
-              SelectableText(details!, style: theme.textTheme.bodySmall, textAlign: TextAlign.center),
+              SelectableText(details!,
+                  style: theme.textTheme.bodySmall,
+                  textAlign: TextAlign.center),
             ],
             if (onRetry != null) ...[
               const SizedBox(height: 16),
-              OutlinedButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh), label: Text(retryLabel)),
+              OutlinedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh),
+                  label: Text(retryLabel)),
             ],
           ],
         ),
@@ -83,7 +105,10 @@ class LoadingView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const CircularProgressIndicator(),
-            if (message != null) ...[const SizedBox(height: 16), Text(message!)],
+            if (message != null) ...[
+              const SizedBox(height: 16),
+              Text(message!)
+            ],
           ],
         ),
       );
@@ -94,8 +119,8 @@ class ButtonSpinner extends StatelessWidget {
   const ButtonSpinner({super.key});
 
   @override
-  Widget build(BuildContext context) =>
-      const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2));
+  Widget build(BuildContext context) => const SizedBox(
+      height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2));
 }
 
 void showSnack(BuildContext context, String message) {
@@ -118,7 +143,9 @@ Future<bool> confirm(
       title: Text(title),
       content: message == null ? null : Text(message),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(cancelLabel)),
+        TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(cancelLabel)),
         FilledButton(
           style: destructive
               ? FilledButton.styleFrom(

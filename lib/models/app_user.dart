@@ -31,7 +31,9 @@ class AppUser {
   /// "Online" is trusted for 2 minutes after the last heartbeat, because a
   /// phone that loses its connection cannot report going offline.
   bool get isOnlineNow =>
-      online && lastSeen != null && DateTime.now().difference(lastSeen!).inMinutes < 2;
+      online &&
+      lastSeen != null &&
+      DateTime.now().difference(lastSeen!).inMinutes < 2;
 
   factory AppUser.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
     if (!doc.exists) return AppUser.missing(doc.id);
@@ -148,4 +150,5 @@ class AccountPrivate {
 /// 3-20 characters, lowercase letters, digits and "_", starting with a letter.
 final RegExp usernamePattern = RegExp(r'^[a-z][a-z0-9_]{2,19}$');
 
-String normalizeUsername(String input) => input.trim().toLowerCase().replaceAll('@', '');
+String normalizeUsername(String input) =>
+    input.trim().toLowerCase().replaceAll('@', '');
