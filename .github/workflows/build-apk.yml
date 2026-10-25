@@ -123,6 +123,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
+      # The runner image is nearly full; WebRTC native libraries need room.
+      - name: Free disk space
+        run: |
+          df -h / | tail -1
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/node_modules /opt/ghc /usr/local/.ghcup \
+            /usr/local/share/boost /usr/share/swift /opt/hostedtoolcache/CodeQL \
+            /usr/local/share/powershell /usr/local/share/chromium /usr/lib/jvm/java-8* || true
+          sudo docker image prune --all --force > /dev/null 2>&1 || true
+          df -h / | tail -1
+
       - uses: actions/checkout@v5
 
       - uses: actions/setup-java@v5
@@ -188,13 +198,13 @@ jobs:
 
       - name: Build debug APK
         run: |
-          flutter build apk --debug --dart-define-from-file="$RUNNER_TEMP/defines.json" 2>&1 | tee ci-logs/build-debug.log
+          flutter build apk --debug --target-platform android-arm,android-arm64 --dart-define-from-file="$RUNNER_TEMP/defines.json" 2>&1 | tee ci-logs/build-debug.log
           exit ${PIPESTATUS[0]}
 
       - name: Build release APK
         if: env.HAS_RELEASE_KEY == 'true'
         run: |
-          flutter build apk --release --dart-define-from-file="$RUNNER_TEMP/defines.json" 2>&1 | tee ci-logs/build-release.log
+          flutter build apk --release --target-platform android-arm,android-arm64 --dart-define-from-file="$RUNNER_TEMP/defines.json" 2>&1 | tee ci-logs/build-release.log
           exit ${PIPESTATUS[0]}
 
       - name: Signing fingerprints (add these in Firebase)
