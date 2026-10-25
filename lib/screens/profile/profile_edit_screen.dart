@@ -127,6 +127,17 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
         _usernameState = _UsernameState.taken;
         _error = context.tr('username_taken');
       });
+    } on ProfileSaveException catch (e) {
+      final outdated =
+          e.permissionDenied && !await UserService.instance.rulesUpToDate();
+      if (!mounted) return;
+      setState(() {
+        _saving = false;
+        _error = outdated
+            ? context.tr('err_rules_outdated')
+            : '${context.tr('err_save_profile')}\n'
+                '${context.tr('err_save_step', {'step': e.step, 'code': e.code})}';
+      });
     } catch (e) {
       if (!mounted) return;
       setState(() {

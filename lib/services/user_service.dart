@@ -9,6 +9,22 @@ class UsernameTakenException implements Exception {
   const UsernameTakenException();
 }
 
+/// A profile-save step that Firestore refused, with the document path.
+class ProfileSaveException implements Exception {
+  final String step;
+  final String code;
+  final Object error;
+  const ProfileSaveException(this.step, this.code, this.error);
+
+  bool get permissionDenied => code == 'permission-denied';
+
+  @override
+  String toString() => 'ProfileSaveException($step, $code): $error';
+}
+
+/// Version of firestore.rules this app expects (see rulesVersion in the rules).
+const expectedRulesVersion = '2026-10-25';
+
 /// Profiles, usernames, privacy settings, presence, blocking, reports and
 /// account deletion.
 ///
@@ -94,7 +110,7 @@ class UserService {
     final userRef = _users.doc(uid);
     final privateBefore = await getPrivate(uid);
 
-    await _db.runTransaction((tx) async {
+    await _step('users/$uid + usernames/$uname', () => _db.runTransaction((tx) async {
       final current = await tx.get(userRef);
       final oldUsername = current.data()?['username'] as String?;
       if (uname != oldUsername) {
@@ -126,7 +142,7 @@ class UserService {
         data['photoBase64'] = FieldValue.delete();
       }
       tx.set(userRef, data, SetOptions(merge: true));
-    });
+    }));
 
     // Private account record (phone/email) and opt-in indexes.
     final private = AccountPrivate(
@@ -142,8 +158,28 @@ class UserService {
       notifyCalls: privateBefore.notifyCalls,
       notificationPreview: privateBefore.notificationPreview,
     );
-    await _private(uid).set(private.toMap(), SetOptions(merge: true));
+    await _step('users/$uid/private/account',
+        () => _private(uid).set(private.toMap(), SetOptions(merge: true)));
     await _applyIndexes(authUser, private, name, uname);
+  }
+
+  Future<T> _step<T>(String path, Future<T> Function() action) async {
+    try {
+      return await action();
+    } on FirebaseException catch (e) {
+      throw ProfileSaveException(path, e.code, e);
+    }
+  }
+
+  /// False when the rules published in Firebase are older than this app
+  /// expects (the probe read is refused).
+  Future<bool> rulesUpToDate() async {
+    try {
+      await _db.collection('rulesVersion').doc(expectedRulesVersion).get();
+      return true;
+    } on FirebaseException catch (e) {
+      return e.code != 'permission-denied';
+    }
   }
 
   Future<void> _applyIndexes(
@@ -153,21 +189,22 @@ class UserService {
     if (phone != null && phone.isNotEmpty) {
       final ref = _db.collection('phoneIndex').doc(phone);
       if (p.discoverableByPhone) {
-        await ref.set({'uid': uid, 'updatedAt': FieldValue.serverTimestamp()});
+        await _step('phoneIndex/$phone',
+            () => ref.set({'uid': uid, 'updatedAt': FieldValue.serverTimestamp()}));
       } else {
         await _ignoreErrors(ref.delete());
       }
     }
     final dir = _db.collection('directory').doc(uid);
     if (p.showInDirectory) {
-      await dir.set({
+      await _step('directory/$uid', () => dir.set({
         'uid': uid,
         'displayName': name,
         'displayNameLower': name.toLowerCase(),
         'username': username,
         'usernameLower': username,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      }));
     } else {
       await _ignoreErrors(dir.delete());
     }

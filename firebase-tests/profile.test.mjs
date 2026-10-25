@@ -15,6 +15,15 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 
+/** Reads a document bypassing the rules (test setup only). */
+async function adminGet(env, ...path) {
+  let snap;
+  await env.withSecurityRulesDisabled(async (c) => {
+    snap = await getDoc(doc(c.firestore(), ...path));
+  });
+  return snap;
+}
+
 const rules = (file) => readFileSync(new URL(file, import.meta.url), 'utf8');
 
 /** Same steps as lib/services/user_service.dart saveProfile(). */
@@ -107,9 +116,12 @@ describe('profile creation with the current firestore.rules', () => {
 
   test('a new email account can create its profile', async () => {
     await saveProfile(ctx(env, emailUser), emailUser, { name: 'Amina', username: 'amina' });
-    const snap = await env.withSecurityRulesDisabled(async (c) =>
-      getDoc(doc(c.firestore(), 'users', emailUser.uid)));
+    const snap = await adminGet(env, 'users', emailUser.uid);
     assert.equal(snap.data().username, 'amina');
+    assert.equal(snap.data().phoneNumber, undefined, 'no phone number in the public profile');
+    assert.equal((await adminGet(env, 'usernames', 'amina')).data().uid, emailUser.uid);
+    assert.equal((await adminGet(env, 'users', emailUser.uid, 'private', 'account')).data().email, emailUser.email);
+    assert.equal((await adminGet(env, 'directory', emailUser.uid)).exists(), true);
   });
 
   test('a new phone account can create its profile', async () => {
@@ -122,9 +134,8 @@ describe('profile creation with the current firestore.rules', () => {
 
   test('changing the username releases the old one', async () => {
     await saveProfile(ctx(env, emailUser), emailUser, { name: 'Amina', username: 'amina_2' });
-    const old = await env.withSecurityRulesDisabled(async (c) =>
-      getDoc(doc(c.firestore(), 'usernames', 'amina')));
-    assert.equal(old.exists(), false);
+    assert.equal((await adminGet(env, 'usernames', 'amina')).exists(), false);
+    assert.equal((await adminGet(env, 'usernames', 'amina_2')).data().uid, emailUser.uid);
   });
 
   test('a profile photo can be saved', async () => {

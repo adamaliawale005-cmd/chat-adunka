@@ -56,6 +56,11 @@ Firebase console > Build > **Authentication** > Get started > Sign-in method:
    later, so note it down for the Cloud Functions region.
 2. Open the **Rules** tab, replace everything with the contents of
    [`firestore.rules`](../firestore.rules), and click **Publish**.
+   **Publish again whenever `firestore.rules` changes in the repository.**
+   The app checks this: if the rules in Firebase are older than the app
+   expects, profile saving shows "Your Firebase database rules are out of
+   date". The current rules start with the comment
+   `// AduChat Firestore security rules.` and contain `rulesVersion`.
 3. Optional: indexes. AduChat needs no composite indexes. The
    [`firestore.indexes.json`](../firestore.indexes.json) file only turns
    off indexing of large photo/blob fields, to save cost. It can be deployed
