@@ -1,15 +1,18 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/app_user.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
-import 'auth/phone_entry_screen.dart';
+import '../widgets/states.dart';
 import 'home_screen.dart';
 import 'profile/profile_edit_screen.dart';
+import 'splash_screen.dart';
+import 'welcome_screen.dart';
 
-/// Signed out -> phone sign-in. Signed in without a profile -> profile
-/// setup. Otherwise -> home.
+/// Signed out -> welcome. Signed in without a profile -> profile setup.
+/// Otherwise -> home.
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
@@ -20,61 +23,30 @@ class AuthGate extends StatelessWidget {
       initialData: AuthService.instance.currentUser,
       builder: (context, snap) {
         final user = snap.data;
-        if (user == null) return const PhoneEntryScreen();
-        return StreamBuilder<AppUser?>(
+        if (user == null) return const WelcomeScreen(firebaseReady: true);
+        return StreamBuilder<AppUser>(
           key: ValueKey(user.uid),
-          stream: UserService.instance.watchUser(user.uid),
+          stream: UserService.instance.watchUserStrict(user.uid),
           builder: (context, profileSnap) {
             if (profileSnap.hasError) {
-              return _ErrorScreen(message: '${profileSnap.error}');
-            }
-            if (profileSnap.connectionState == ConnectionState.waiting &&
-                !profileSnap.hasData) {
-              return const Scaffold(body: Center(child: CircularProgressIndicator()));
-            }
-            final profile = profileSnap.data;
-            if (profile == null || !profile.hasProfile) {
-              return ProfileEditScreen(
-                uid: user.uid,
-                phoneNumber: user.phoneNumber ?? '',
-                existing: profile,
-                isFirstSetup: true,
+              return Scaffold(
+                body: ErrorView(
+                  message: context.tr('profile_load_failed'),
+                  details: '${profileSnap.error}',
+                  retryLabel: context.tr('sign_out'),
+                  onRetry: () => AuthService.instance.signOut(),
+                ),
               );
             }
-            return HomeScreen(me: profile);
+            final profile = profileSnap.data;
+            if (profile == null) return const SplashScreen();
+            if (!profile.hasProfile) {
+              return ProfileEditScreen(authUser: user, existing: null, isFirstSetup: true);
+            }
+            return HomeScreen(key: ValueKey('home-${user.uid}'), me: profile, authUser: user);
           },
         );
       },
-    );
-  }
-}
-
-class _ErrorScreen extends StatelessWidget {
-  final String message;
-  const _ErrorScreen({required this.message});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Chat Aduunka')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 48, color: Colors.red),
-            const SizedBox(height: 12),
-            const Text('Could not load your profile.'),
-            const SizedBox(height: 8),
-            SelectableText(message, textAlign: TextAlign.center),
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: () => AuthService.instance.signOut(),
-              child: const Text('Sign out'),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -27,7 +27,6 @@ service cloud.firestore {
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
     function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
-    function path(p) { return /databases/$(database)/documents/$(p); }
 
     function hasBlocked(owner, other) {
       return exists(/databases/$(database)/documents/users/$(owner)/blocked/$(other));
@@ -62,7 +61,7 @@ service cloud.firestore {
         && (!('online' in d) || d.online is bool)
         && (!('username' in d) || (
               d.username.matches('^[a-z][a-z0-9_]{2,19}$')
-              && (!usernameChanged || getAfter(path('usernames/' + d.username)).data.uid == userId)));
+              && (!usernameChanged || getAfter(/databases/$(database)/documents/usernames/$(d.username)).data.uid == userId)));
     }
 
     match /users/{userId} {
@@ -74,7 +73,9 @@ service cloud.firestore {
       match /private/{docId} {
         allow read, delete: if signedIn() && me() == userId;
         allow create, update: if signedIn() && me() == userId
-          && request.resource.size() < 20000;
+          && incoming().keys().hasOnly(['phoneNumber', 'email', 'discoverableByPhone',
+                                        'showInDirectory', 'showLastSeen', 'readReceipts',
+                                        'contactSync', 'notifications', 'mutedChats']);
       }
 
       match /devices/{token} {
@@ -90,7 +91,7 @@ service cloud.firestore {
       // Call history. The caller also writes the callee's entry so that
       // missed calls appear even if the callee's app was closed.
       match /calls/{callId} {
-        function callAfter() { return getAfter(path('calls/' + callId)).data; }
+        function callAfter() { return getAfter(/databases/$(database)/documents/calls/$(callId)).data; }
         allow read, delete: if signedIn() && me() == userId;
         allow create, update: if signedIn()
           && (me() == userId || (callAfter().callerId == me() && userId in callAfter().members))
@@ -315,7 +316,7 @@ service cloud.firestore {
       allow delete: if false;
 
       match /candidates/{candidateId} {
-        function call() { return get(path('calls/' + callId)).data; }
+        function call() { return get(/databases/$(database)/documents/calls/$(callId)).data; }
         allow read: if signedIn() && me() in call().members;
         allow create: if signedIn() && me() in call().members
           && incoming().keys().hasOnly(['from', 'candidate', 'sdpMid', 'sdpMLineIndex', 'createdAt'])

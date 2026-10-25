@@ -4,19 +4,18 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/states.dart';
+import 'sign_in_screen.dart';
 
+/// Enter the 6-digit SMS code.
 class OtpScreen extends StatefulWidget {
   final String phoneNumber;
   final String verificationId;
   final int? resendToken;
 
-  const OtpScreen({
-    super.key,
-    required this.phoneNumber,
-    required this.verificationId,
-    this.resendToken,
-  });
+  const OtpScreen({super.key, required this.phoneNumber, required this.verificationId, this.resendToken});
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -24,8 +23,8 @@ class OtpScreen extends StatefulWidget {
 
 class _OtpScreenState extends State<OtpScreen> {
   final _code = TextEditingController();
-  late String _verificationId;
-  int? _resendToken;
+  late String _verificationId = widget.verificationId;
+  late int? _resendToken = widget.resendToken;
   bool _busy = false;
   String? _error;
   int _secondsLeft = 60;
@@ -34,22 +33,16 @@ class _OtpScreenState extends State<OtpScreen> {
   @override
   void initState() {
     super.initState();
-    _verificationId = widget.verificationId;
-    _resendToken = widget.resendToken;
     _startTimer();
   }
 
   void _startTimer() {
     _timer?.cancel();
-    setState(() => _secondsLeft = 60);
+    _secondsLeft = 60;
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) return;
-      if (_secondsLeft <= 1) {
-        t.cancel();
-        setState(() => _secondsLeft = 0);
-      } else {
-        setState(() => _secondsLeft--);
-      }
+      setState(() => _secondsLeft = _secondsLeft <= 1 ? 0 : _secondsLeft - 1);
+      if (_secondsLeft == 0) t.cancel();
     });
   }
 
@@ -60,15 +53,10 @@ class _OtpScreenState extends State<OtpScreen> {
     super.dispose();
   }
 
-  void _done() {
-    if (!mounted) return;
-    Navigator.of(context).popUntil((r) => r.isFirst);
-  }
-
   Future<void> _verify() async {
     final code = _code.text.trim();
     if (code.length != 6) {
-      setState(() => _error = 'Enter the 6-digit code.');
+      setState(() => _error = context.tr('enter_6_digits'));
       return;
     }
     setState(() {
@@ -77,12 +65,12 @@ class _OtpScreenState extends State<OtpScreen> {
     });
     try {
       await AuthService.instance.verifyCode(verificationId: _verificationId, smsCode: code);
-      _done();
+      if (mounted) goToAuthGate(context);
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       setState(() {
         _busy = false;
-        _error = AuthService.describeError(e);
+        _error = context.tr(AuthService.errorKey(e.code));
       });
     }
   }
@@ -104,12 +92,14 @@ class _OtpScreenState extends State<OtpScreen> {
         });
         _startTimer();
       },
-      onAutoVerified: _done,
-      onError: (message) {
+      onAutoVerified: () {
+        if (mounted) goToAuthGate(context);
+      },
+      onError: (code) {
         if (!mounted) return;
         setState(() {
           _busy = false;
-          _error = message;
+          _error = context.tr(AuthService.errorKey(code));
         });
       },
     );
@@ -118,49 +108,49 @@ class _OtpScreenState extends State<OtpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Verify your number')),
+      appBar: AppBar(title: Text(context.tr('verify_number'))),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            Text('Enter the code sent to ${widget.phoneNumber}', textAlign: TextAlign.center),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _code,
-              enabled: !_busy,
-              autofocus: true,
-              keyboardType: TextInputType.number,
-              autofillHints: const [AutofillHints.oneTimeCode],
-              maxLength: 6,
+            Text(
+              context.tr('code_sent_to', {'phone': '⁦${widget.phoneNumber}⁩'}),
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 28, letterSpacing: 12),
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(
-                border: const OutlineInputBorder(),
-                counterText: '',
-                errorText: _error,
-                errorMaxLines: 4,
+            ),
+            const SizedBox(height: 24),
+            Directionality(
+              textDirection: TextDirection.ltr,
+              child: TextField(
+                controller: _code,
+                enabled: !_busy,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                autofillHints: const [AutofillHints.oneTimeCode],
+                maxLength: 6,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 28, letterSpacing: 12),
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(counterText: '', errorText: _error, errorMaxLines: 5),
+                onChanged: (v) {
+                  if (v.length == 6) _verify();
+                },
               ),
-              onChanged: (v) {
-                if (v.length == 6) _verify();
-              },
             ),
             const SizedBox(height: 24),
             FilledButton(
               onPressed: _busy ? null : _verify,
-              child: _busy
-                  ? const SizedBox(
-                      height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Verify'),
+              child: _busy ? const ButtonSpinner() : Text(context.tr('verify')),
             ),
             const SizedBox(height: 12),
             TextButton(
               onPressed: (_busy || _secondsLeft > 0) ? null : _resend,
-              child: Text(_secondsLeft > 0 ? 'Resend code in $_secondsLeft s' : 'Resend code'),
+              child: Text(_secondsLeft > 0
+                  ? context.tr('resend_in', {'seconds': _secondsLeft})
+                  : context.tr('resend_code')),
             ),
             TextButton(
               onPressed: _busy ? null : () => Navigator.of(context).pop(),
-              child: const Text('Change number'),
+              child: Text(context.tr('change_number')),
             ),
           ],
         ),
