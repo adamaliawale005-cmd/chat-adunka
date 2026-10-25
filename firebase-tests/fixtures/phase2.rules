@@ -1,0 +1,69 @@
+rules_version = '2';
+
+// Chat Aduunka Firestore security rules.
+// Paste into Firebase console > Firestore Database > Rules, then Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // chatId is "<uidA>_<uidB>" with the two user ids sorted.
+    function isMember(chatId) {
+      return signedIn() && request.auth.uid in chatId.split('_');
+    }
+
+    function validProfile(uid) {
+      let d = request.resource.data;
+      return d.uid == uid
+        && d.phoneNumber == request.auth.token.phone_number
+        && d.displayName is string
+        && d.displayName.size() > 0 && d.displayName.size() <= 50
+        && (!('about' in d) || (d.about is string && d.about.size() <= 140))
+        && (!('photoBase64' in d) || (d.photoBase64 is string && d.photoBase64.size() < 200000));
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && request.auth.uid == uid && validProfile(uid);
+      allow delete: if false;
+
+      // FCM device tokens: private to the owner.
+      match /devices/{deviceId} {
+        allow read, write: if signedIn() && request.auth.uid == uid;
+      }
+    }
+
+    match /chats/{chatId} {
+      allow read: if signedIn() && request.auth.uid in resource.data.participants;
+      allow create, update: if isMember(chatId)
+        && request.resource.data.participants.size() == 2
+        && request.resource.data.participants.hasAll(chatId.split('_'))
+        && request.resource.data.lastSenderId == request.auth.uid;
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isMember(chatId);
+
+        allow create: if isMember(chatId)
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.receiverId in chatId.split('_')
+          && request.resource.data.receiverId != request.auth.uid
+          && request.resource.data.status == 'sent'
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 4000;
+
+        // Only the receiver may advance delivery status.
+        allow update: if isMember(chatId)
+          && request.auth.uid == resource.data.receiverId
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['status', 'deliveredAt', 'readAt'])
+          && request.resource.data.status in ['delivered', 'read'];
+
+        allow delete: if false;
+      }
+    }
+  }
+}

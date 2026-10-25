@@ -135,6 +135,15 @@ service cloud.firestore {
       allow delete: if signedIn() && me() == userId;
     }
 
+    // ---------- rules version probe ----------
+    // The app reads rulesVersion/<version> (the document does not need to
+    // exist). If the read is refused, the rules published in the Firebase
+    // console are older than the app expects. Nothing is stored here.
+    match /rulesVersion/{version} {
+      allow get: if signedIn() && version == '2026-10-25';
+      allow list, write: if false;
+    }
+
     // ---------- abuse reports ----------
     match /reports/{reportId} {
       allow create: if signedIn()
