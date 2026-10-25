@@ -1,0 +1,58 @@
+name: Create signing keys (run once)
+
+# Generates a stable debug key and a release key for AduChat. The keys are
+# delivered as a short-lived private artifact (deleted after 1 day) together
+# with instructions for turning them into repository secrets. Nothing is
+# committed and no secret is printed in the log.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  keys:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Generate keys
+        run: |
+          mkdir -p out && cd out
+          keytool -genkeypair -v -keystore debug.keystore -storepass android -keypass android \
+            -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US" > /dev/null 2>&1
+          PASS=$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-24)
+          keytool -genkeypair -v -keystore release.keystore -storepass "$PASS" -keypass "$PASS" \
+            -alias aduchat -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=AduChat,O=AduChat,C=SO" > /dev/null 2>&1
+          {
+            echo "AduChat signing keys. Keep this file private and delete it after use."
+            echo
+            echo "Create these repository secrets (Settings > Secrets and variables > Actions):"
+            echo
+            echo "ANDROID_DEBUG_KEYSTORE_BASE64 = contents of debug.keystore.base64.txt"
+            echo "ANDROID_RELEASE_KEYSTORE_BASE64 = contents of release.keystore.base64.txt"
+            echo "ANDROID_RELEASE_STORE_PASSWORD = $PASS"
+            echo "ANDROID_RELEASE_KEY_ALIAS = aduchat"
+            echo "ANDROID_RELEASE_KEY_PASSWORD = $PASS"
+            echo
+            echo "Keep release.keystore and the password safe somewhere else too:"
+            echo "losing them means future updates cannot replace the installed app."
+            echo
+            echo "Add these fingerprints in Firebase (Project settings > Your apps > Add fingerprint):"
+            echo "Debug:"
+            keytool -list -v -keystore debug.keystore -storepass android | grep -E "SHA1:|SHA256:"
+            echo "Release:"
+            keytool -list -v -keystore release.keystore -storepass "$PASS" | grep -E "SHA1:|SHA256:"
+          } > README.txt
+          base64 -w0 debug.keystore > debug.keystore.base64.txt
+          base64 -w0 release.keystore > release.keystore.base64.txt
+          echo "Keys generated."
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aduchat-signing-keys-PRIVATE
+          path: out/
+          retention-days: 1

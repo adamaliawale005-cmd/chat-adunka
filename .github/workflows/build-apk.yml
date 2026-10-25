@@ -1,7 +1,11 @@
-name: Build Chat Aduunka APK
+name: AduChat CI
 
 on:
   push:
+    branches:
+      - main
+      - dev
+  pull_request:
     branches:
       - main
   workflow_dispatch:
@@ -9,113 +13,247 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build:
+  checks:
+    name: Credentials scan, format, analyze, tests
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-
+    timeout-minutes: 30
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
 
-      - name: Generate Android project
+      - name: Scan for committed credentials
         run: |
-          flutter --version
-          flutter create --org com.aduchat --project-name chat_adunka --platforms=android . 2>&1 | tee create.log
-          python3 tool/configure_android.py .
+          mkdir -p ci-logs
+          python3 tool/ci/scan_secrets.py 2>&1 | tee ci-logs/secrets.log; exit ${PIPESTATUS[0]}
 
-      # Optional: a fixed signing key so every build has the same SHA
-      # fingerprints (needed for Firebase phone sign-in) and new APKs install
-      # over old ones. Without the secret, a temporary key is used.
-      - name: Install stable signing key (optional)
-        env:
-          ANDROID_DEBUG_KEYSTORE_BASE64: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+      - name: Install dependencies
         run: |
-          if [ -n "$ANDROID_DEBUG_KEYSTORE_BASE64" ]; then
-            mkdir -p ~/.android
-            echo "$ANDROID_DEBUG_KEYSTORE_BASE64" | base64 -d > ~/.android/debug.keystore
-            echo "::notice title=Signing::Using the stable signing key from repository secrets."
-          else
-            echo "::warning title=Signing::ANDROID_DEBUG_KEYSTORE_BASE64 secret not set. This build uses a temporary signing key, so phone sign-in will not work and the APK cannot update an earlier install."
+          flutter --version | tee ci-logs/flutter-version.log
+          flutter pub get 2>&1 | tee ci-logs/pubget.log; exit ${PIPESTATUS[0]}
+
+      - name: Dependency report (security advisories and outdated packages)
+        continue-on-error: true
+        run: |
+          flutter pub outdated --no-dev-dependencies 2>&1 | tee ci-logs/outdated.log
+          if grep -qi "advisor" ci-logs/pubget.log ci-logs/outdated.log; then
+            echo "::warning title=Dependency advisories::See ci-logs/pubget.log"
           fi
 
-      # Firebase settings come from repository secrets and are never committed.
-      - name: Prepare Firebase settings
+      - name: Check Dart formatting
+        id: format
+        continue-on-error: true
+        run: |
+          dart format --output=none --set-exit-if-changed lib test 2>&1 | tee ci-logs/format.log
+          code=${PIPESTATUS[0]}
+          if [ $code -ne 0 ]; then
+            dart format lib test > /dev/null
+            git diff > ci-logs/format.patch
+            git checkout -- lib test
+          fi
+          exit $code
+
+      - name: Static analysis
+        id: analyze
+        continue-on-error: true
+        run: flutter analyze --no-fatal-infos 2>&1 | tee ci-logs/analyze.log; exit ${PIPESTATUS[0]}
+
+      - name: Automated tests
+        id: tests
+        continue-on-error: true
+        run: flutter test --reporter expanded 2>&1 | tee ci-logs/test.log; exit ${PIPESTATUS[0]}
+
+      - name: Result
+        run: |
+          echo "format=${{ steps.format.outcome }} analyze=${{ steps.analyze.outcome }} tests=${{ steps.tests.outcome }}" | tee ci-logs/checks-summary.log
+          for s in "${{ steps.format.outcome }}" "${{ steps.analyze.outcome }}" "${{ steps.tests.outcome }}"; do
+            [ "$s" = "success" ] || exit 1
+          done
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs-checks
+          path: ci-logs/
+          retention-days: 7
+
+  rules:
+    name: Firestore and Storage security rules tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - name: Run rules tests in the Firebase emulator
+        working-directory: firebase-tests
+        run: |
+          mkdir -p ../ci-logs
+          npm install --no-audit --no-fund 2>&1 | tail -5
+          npx firebase emulators:exec --project demo-aduchat --only firestore,storage "node --test --test-concurrency=1" 2>&1 | tee ../ci-logs/rules-test.log
+          exit ${PIPESTATUS[0]}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs-rules
+          path: ci-logs/
+          retention-days: 7
+
+  build:
+    name: Build Android APK
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # Firebase settings and feature switches come from repository secrets
+      # and variables. Nothing is committed; values are never printed.
+      - name: Validate Firebase configuration
         env:
           FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
           FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
           FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          TURN_URLS: ${{ secrets.TURN_URLS }}
+          TURN_USERNAME: ${{ secrets.TURN_USERNAME }}
+          TURN_CREDENTIAL: ${{ secrets.TURN_CREDENTIAL }}
+          STORAGE_ENABLED: ${{ vars.STORAGE_ENABLED }}
+          EMAIL_AUTH_ENABLED: ${{ vars.EMAIL_AUTH_ENABLED }}
+          PHONE_AUTH_ENABLED: ${{ vars.PHONE_AUTH_ENABLED }}
         run: |
-          python3 - <<'EOF'
-          import json, os
-          keys = ["FIREBASE_API_KEY", "FIREBASE_APP_ID", "FIREBASE_MESSAGING_SENDER_ID",
-                  "FIREBASE_PROJECT_ID", "FIREBASE_STORAGE_BUCKET"]
-          values = {k: os.environ.get(k, "") for k in keys}
-          with open(os.path.join(os.environ["RUNNER_TEMP"], "firebase_defines.json"), "w") as f:
-              json.dump(values, f)
-          missing = [k for k in keys[:4] if not values[k]]
-          if missing:
-              print("::warning title=Firebase::Not configured (missing secrets: " + ", ".join(missing) + "). The APK will show the setup screen instead of sign-in.")
-          else:
-              print("::notice title=Firebase::Firebase settings found for project " + values["FIREBASE_PROJECT_ID"] + ".")
-          EOF
+          mkdir -p ci-logs
+          python3 tool/ci/firebase_check.py "$RUNNER_TEMP/defines.json" 2>&1 | tee ci-logs/firebase-check.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Install signing keys
+        env:
+          DEBUG_KEYSTORE: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
+        run: |
+          if [ -n "$DEBUG_KEYSTORE" ]; then
+            mkdir -p ~/.android
+            echo "$DEBUG_KEYSTORE" | base64 -d > ~/.android/debug.keystore
+            echo "::notice title=Debug signing::Using the stable debug key from secrets."
+          else
+            echo "::warning title=Debug signing::ANDROID_DEBUG_KEYSTORE_BASE64 is not set. This build uses a temporary key: Firebase phone sign-in will fail and the APK cannot update an earlier install. Run the 'Create signing keys' workflow."
+          fi
+          if [ -n "$RELEASE_KEYSTORE" ] && [ -n "$RELEASE_STORE_PASSWORD" ] && [ -n "$RELEASE_KEY_ALIAS" ]; then
+            echo "$RELEASE_KEYSTORE" | base64 -d > android/app/release.keystore
+            {
+              echo "storeFile=release.keystore"
+              echo "storePassword=$RELEASE_STORE_PASSWORD"
+              echo "keyAlias=$RELEASE_KEY_ALIAS"
+              echo "keyPassword=${RELEASE_KEY_PASSWORD:-$RELEASE_STORE_PASSWORD}"
+            } > android/key.properties
+            echo "HAS_RELEASE_KEY=true" >> "$GITHUB_ENV"
+          else
+            echo "::notice title=Release signing::No release key secrets, so only the debug APK is built."
+          fi
 
       - name: Install dependencies
-        run: flutter pub get 2>&1 | tee pubget.log; exit ${PIPESTATUS[0]}
+        run: flutter pub get 2>&1 | tee ci-logs/build-pubget.log; exit ${PIPESTATUS[0]}
 
-      - name: Analyze code
+      - name: Build debug APK
         run: |
-          set +e
-          flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | tee analyze.log
-          code=${PIPESTATUS[0]}
-          python3 - <<'EOF'
-          t = open("analyze.log").read()[-20000:]
-          t = t.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
-          print("::notice title=flutter analyze::" + t)
-          EOF
-          exit $code
+          flutter build apk --debug --dart-define-from-file="$RUNNER_TEMP/defines.json" 2>&1 | tee ci-logs/build-debug.log
+          exit ${PIPESTATUS[0]}
 
-      - name: Run tests
-        run: flutter test 2>&1 | tee test.log; exit ${PIPESTATUS[0]}
-
-      - name: Build Android APK
-        run: flutter build apk --debug --dart-define-from-file="$RUNNER_TEMP/firebase_defines.json" 2>&1 | tee build.log; exit ${PIPESTATUS[0]}
-
-      - name: Show signing fingerprints
+      - name: Build release APK
+        if: env.HAS_RELEASE_KEY == 'true'
         run: |
-          fp=$(keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android 2>/dev/null | grep -E "SHA1:|SHA256:" | sed 's/^[[:space:]]*//' | tr '\n' ' ')
-          echo "::notice title=SHA fingerprints (add these in Firebase)::$fp"
+          flutter build apk --release --dart-define-from-file="$RUNNER_TEMP/defines.json" 2>&1 | tee ci-logs/build-release.log
+          exit ${PIPESTATUS[0]}
 
-      - name: Upload APK
+      - name: Signing fingerprints (add these in Firebase)
+        if: always()
+        run: |
+          {
+            echo "Debug key:"
+            keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android 2>/dev/null | grep -E "SHA1:|SHA256:"
+            if [ -f android/app/release.keystore ]; then
+              echo "Release key:"
+              keytool -list -v -keystore android/app/release.keystore -storepass "$(grep storePassword android/key.properties | cut -d= -f2-)" 2>/dev/null | grep -E "SHA1:|SHA256:"
+            fi
+          } | tee ci-logs/fingerprints.log
+          echo "::notice title=SHA fingerprints::$(tr '\n' ' ' < ci-logs/fingerprints.log)"
+          rm -f android/key.properties android/app/release.keystore
+
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: Chat-Aduunka-APK
+          name: AduChat-debug-APK
           path: build/app/outputs/flutter-apk/app-debug.apk
 
-      # Logs are summarised as annotations so failures are visible from the
-      # run's summary page and the GitHub API.
-      - name: Report failure details
-        if: failure()
+      - name: Upload release APK
+        if: env.HAS_RELEASE_KEY == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: AduChat-release-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs-build
+          path: ci-logs/
+          retention-days: 7
+
+  # Publishes all logs to the "ci-logs" branch so they can be read with git
+  # (the newest run replaces the previous one).
+  report:
+    name: Publish logs
+    needs: [checks, rules, build]
+    if: always() && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: logs-*
+          path: logs
+      - name: Push logs
         run: |
-          python3 - <<'EOF'
-          import os
-          for f in ["create.log", "pubget.log", "analyze.log", "test.log", "build.log"]:
-              if os.path.exists(f):
-                  t = open(f, errors="replace").read()[-12000:]
-                  t = t.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
-                  print(f"::error title={f}::{t}")
-          EOF
+          cd logs
+          {
+            echo "run: ${{ github.run_id }}"
+            echo "branch: ${{ github.ref_name }}"
+            echo "commit: ${{ github.sha }}"
+            echo "checks: ${{ needs.checks.result }}"
+            echo "rules: ${{ needs.rules.result }}"
+            echo "build: ${{ needs.build.result }}"
+          } > SUMMARY.txt
+          git init -q -b ci-logs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "CI logs for run ${{ github.run_id }} (${{ github.ref_name }})"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" ci-logs

@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// AduChat Cloud Storage rules. Storage needs the Blaze plan; the app only
+// uses it when the STORAGE_ENABLED build variable is "true".
+//
+// Files live at chats/{chatId}/{senderUid}/{fileName}. Only members of the
+// chat can read them; only the sender can upload or delete them.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() { return request.auth != null; }
+
+    function isMember(chatId) {
+      return signedIn() && (
+        (chatId.split('_').size() == 2 && request.auth.uid in chatId.split('_'))
+        || (chatId.split('_').size() != 2
+            && request.auth.uid in firestore.get(/databases/(default)/documents/chats/$(chatId)).data.members));
+    }
+
+    function allowedType() {
+      return request.resource.contentType.matches('image/.*')
+        || request.resource.contentType.matches('video/.*')
+        || request.resource.contentType.matches('audio/.*')
+        || request.resource.contentType.matches('application/.*')
+        || request.resource.contentType.matches('text/.*');
+    }
+
+    match /chats/{chatId}/{senderId}/{fileName} {
+      allow read: if isMember(chatId);
+      allow create: if isMember(chatId)
+        && request.auth.uid == senderId
+        && request.resource.size < 50 * 1024 * 1024
+        && allowedType();
+      allow update: if false;
+      allow delete: if signedIn() && request.auth.uid == senderId;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

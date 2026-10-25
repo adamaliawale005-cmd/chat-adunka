@@ -10,8 +10,6 @@ build/
 .idea/
 .metadata
 
-# Generated in CI by `flutter create` (see tool/configure_android.py)
-android/
 
 # Never commit Firebase or signing credentials
 google-services.json

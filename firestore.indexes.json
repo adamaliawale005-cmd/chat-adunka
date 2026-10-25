@@ -1,0 +1,30 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "blobs",
+      "fieldPath": "data",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "users",
+      "fieldPath": "photoBase64",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "chats",
+      "fieldPath": "photoBase64",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "calls",
+      "fieldPath": "offer",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "calls",
+      "fieldPath": "answer",
+      "indexes": []
+    }
+  ]
+}

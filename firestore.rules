@@ -1,68 +1,326 @@
 rules_version = '2';
 
-// Chat Aduunka Firestore security rules.
-// Paste into Firebase console > Firestore Database > Rules, then Publish.
+// AduChat Firestore security rules.
+//
+// Data model (see docs/ARCHITECTURE.md):
+//   users/{uid}                    public profile (no phone number)
+//   users/{uid}/private/{doc}      phone, email, settings (owner only)
+//   users/{uid}/devices/{token}    FCM tokens (owner only)
+//   users/{uid}/blocked/{otherUid} block list (owner only)
+//   users/{uid}/calls/{callId}     call history entries
+//   usernames/{username}           unique username -> uid (get only)
+//   phoneIndex/{e164}              phone -> uid for opted-in users (get only)
+//   directory/{uid}                searchable name/username (opt-in)
+//   chats/{chatId}                 direct ("uidA_uidB") or group chat
+//   chats/{chatId}/messages/{id}   messages
+//   chats/{chatId}/blobs/{id}      inline attachments (free-plan images/voice)
+//   calls/{callId}                 WebRTC call signaling
+//   calls/{callId}/candidates/{id} ICE candidates
+//   reports/{id}                   abuse reports (write only)
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function signedIn() {
-      return request.auth != null;
+    // ---------- helpers ----------
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function isStr(v, min, max) { return v is string && v.size() >= min && v.size() <= max; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+    function path(p) { return /databases/$(database)/documents/$(p); }
+
+    function hasBlocked(owner, other) {
+      return exists(/databases/$(database)/documents/users/$(owner)/blocked/$(other));
     }
 
-    // chatId is "<uidA>_<uidB>" with the two user ids sorted.
+    // Direct chat ids are the two user ids sorted and joined with "_".
+    // Firebase user ids never contain "_", group chat ids never contain "_".
+    function isDirectId(chatId) { return chatId.split('_').size() == 2; }
+    function inDirect(chatId) { return isDirectId(chatId) && me() in chatId.split('_'); }
+    function chat(chatId) { return get(/databases/$(database)/documents/chats/$(chatId)).data; }
+    function chatAfter(chatId) { return getAfter(/databases/$(database)/documents/chats/$(chatId)).data; }
     function isMember(chatId) {
-      return signedIn() && request.auth.uid in chatId.split('_');
+      return signedIn() && (inDirect(chatId) || (!isDirectId(chatId) && me() in chat(chatId).members));
+    }
+    function isMemberAfter(chatId) {
+      return signedIn() && (inDirect(chatId) || (!isDirectId(chatId) && me() in chatAfter(chatId).members));
+    }
+    function isGroupAdmin(chatId) {
+      return signedIn() && !isDirectId(chatId) && me() in chat(chatId).admins;
     }
 
-    function validProfile(uid) {
-      let d = request.resource.data;
-      return d.uid == uid
-        && d.phoneNumber == request.auth.token.phone_number
-        && d.displayName is string
-        && d.displayName.size() > 0 && d.displayName.size() <= 50
-        && (!('about' in d) || (d.about is string && d.about.size() <= 140))
-        && (!('photoBase64' in d) || (d.photoBase64 is string && d.photoBase64.size() < 200000));
+    // ---------- users ----------
+    function validUser(userId) {
+      let d = incoming();
+      let usernameChanged = resource == null || d.get('username', '') != resource.data.get('username', '');
+      return d.keys().hasOnly(['uid', 'displayName', 'displayNameLower', 'username', 'usernameLower',
+                               'about', 'photoBase64', 'createdAt', 'updatedAt', 'lastSeen', 'online'])
+        && d.uid == userId
+        && isStr(d.displayName, 1, 50)
+        && (!('about' in d) || isStr(d.about, 0, 140))
+        && (!('photoBase64' in d) || isStr(d.photoBase64, 1, 200000))
+        && (!('online' in d) || d.online is bool)
+        && (!('username' in d) || (
+              d.username.matches('^[a-z][a-z0-9_]{2,19}$')
+              && (!usernameChanged || getAfter(path('usernames/' + d.username)).data.uid == userId)));
     }
 
-    match /users/{uid} {
-      allow read: if signedIn();
-      allow create, update: if signedIn() && request.auth.uid == uid && validProfile(uid);
-      allow delete: if false;
+    match /users/{userId} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create, update: if signedIn() && me() == userId && validUser(userId);
+      allow delete: if signedIn() && me() == userId;
 
-      // FCM device tokens: private to the owner.
-      match /devices/{deviceId} {
-        allow read, write: if signedIn() && request.auth.uid == uid;
+      match /private/{docId} {
+        allow read, delete: if signedIn() && me() == userId;
+        allow create, update: if signedIn() && me() == userId
+          && request.resource.size() < 20000;
+      }
+
+      match /devices/{token} {
+        allow read, write: if signedIn() && me() == userId;
+      }
+
+      match /blocked/{otherId} {
+        allow read, delete: if signedIn() && me() == userId;
+        allow create, update: if signedIn() && me() == userId && otherId != userId
+          && incoming().keys().hasOnly(['uid', 'createdAt']) && incoming().uid == otherId;
+      }
+
+      // Call history. The caller also writes the callee's entry so that
+      // missed calls appear even if the callee's app was closed.
+      match /calls/{callId} {
+        function callAfter() { return getAfter(path('calls/' + callId)).data; }
+        allow read, delete: if signedIn() && me() == userId;
+        allow create, update: if signedIn()
+          && (me() == userId || (callAfter().callerId == me() && userId in callAfter().members))
+          && incoming().keys().hasOnly(['callId', 'peerId', 'type', 'direction', 'status',
+                                        'createdAt', 'answeredAt', 'endedAt', 'durationSec', 'seen'])
+          && incoming().callId == callId;
       }
     }
 
-    match /chats/{chatId} {
-      allow read: if signedIn() && request.auth.uid in resource.data.participants;
-      allow create, update: if isMember(chatId)
-        && request.resource.data.participants.size() == 2
-        && request.resource.data.participants.hasAll(chatId.split('_'))
-        && request.resource.data.lastSenderId == request.auth.uid;
-      allow delete: if false;
+    // ---------- usernames, phone index, directory ----------
+    match /usernames/{username} {
+      allow get: if signedIn();
+      allow list, update: if false;
+      allow create: if signedIn() && username.matches('^[a-z][a-z0-9_]{2,19}$')
+        && incoming().keys().hasOnly(['uid', 'createdAt']) && incoming().uid == me();
+      allow delete: if signedIn() && existing().uid == me();
+    }
 
+    // Lookup by exact phone number only; listing is impossible, so phone
+    // numbers cannot be harvested with a query.
+    match /phoneIndex/{phone} {
+      allow get: if signedIn();
+      allow list, update: if false;
+      allow create: if signedIn() && request.auth.token.phone_number == phone
+        && incoming().keys().hasOnly(['uid', 'updatedAt']) && incoming().uid == me();
+      allow delete: if signedIn() && existing().uid == me();
+    }
+
+    match /directory/{userId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && me() == userId
+        && incoming().keys().hasOnly(['uid', 'displayName', 'displayNameLower', 'username',
+                                      'usernameLower', 'updatedAt'])
+        && incoming().uid == userId
+        && isStr(incoming().displayName, 1, 50)
+        && isStr(incoming().displayNameLower, 1, 50)
+        && isStr(incoming().get('usernameLower', ''), 0, 20);
+      allow delete: if signedIn() && me() == userId;
+    }
+
+    // ---------- abuse reports ----------
+    match /reports/{reportId} {
+      allow create: if signedIn()
+        && incoming().keys().hasOnly(['reporterId', 'reportedUid', 'reason', 'details',
+                                      'chatId', 'messageId', 'createdAt'])
+        && incoming().reporterId == me()
+        && incoming().reportedUid != me()
+        && isStr(incoming().reason, 1, 50)
+        && isStr(incoming().get('details', ''), 0, 1000);
+      allow read, update, delete: if false;
+    }
+
+    // ---------- chats ----------
+    function summaryKeys() {
+      return ['lastMessage', 'lastMessageType', 'lastSenderId', 'lastMessageAt', 'lastMessageId',
+              'updatedAt', 'typing', 'unread'];
+    }
+    function validSummary() {
+      return !('lastMessage' in changed()) || incoming().lastSenderId == me();
+    }
+    function onlyOwnTyping() {
+      return !('typing' in changed())
+        || incoming().typing.diff(existing().get('typing', {})).affectedKeys().hasOnly([me()]);
+    }
+
+    match /chats/{chatId} {
+      allow get: if isMember(chatId);
+      allow list: if signedIn() && me() in resource.data.members;
+
+      allow create: if signedIn() && (
+        // direct chat
+        (isDirectId(chatId) && inDirect(chatId)
+          && incoming().type == 'direct'
+          && incoming().members.size() == 2
+          && incoming().members.hasAll(chatId.split('_'))
+          && incoming().lastSenderId == me())
+        ||
+        // group chat
+        (!isDirectId(chatId)
+          && incoming().type == 'group'
+          && incoming().createdBy == me()
+          && me() in incoming().members
+          && me() in incoming().admins
+          && incoming().members.hasAll(incoming().admins)
+          && incoming().members.size() >= 2
+          && incoming().members.size() <= 256
+          && isStr(incoming().name, 1, 60)
+          && isStr(incoming().get('photoBase64', 'x'), 1, 200000)));
+
+      allow update: if signedIn()
+        && me() in existing().members
+        && incoming().type == existing().type
+        && incoming().get('createdBy', '') == existing().get('createdBy', '')
+        && onlyOwnTyping()
+        && (
+          // anyone in the chat: last-message summary, typing, unread counters
+          (changed().hasOnly(summaryKeys()) && validSummary())
+          ||
+          // group admins: anything (members, admins, name, photo, settings)
+          (existing().type == 'group' && me() in existing().admins
+            && validSummary()
+            && incoming().members.size() <= 256
+            && incoming().members.hasAll(incoming().admins)
+            && isStr(incoming().name, 1, 60))
+          ||
+          // group member leaving
+          (existing().type == 'group'
+            && changed().hasOnly(['members', 'admins', 'updatedAt', 'unread', 'typing'])
+            && incoming().members.toSet() == existing().members.toSet().difference([me()].toSet())
+            && incoming().admins.toSet() == existing().admins.toSet().difference([me()].toSet()))
+          ||
+          // group member editing info, when the group allows it
+          (existing().type == 'group' && !existing().get('onlyAdminsEditInfo', false)
+            && changed().hasOnly(['name', 'photoBase64', 'description', 'updatedAt'])
+            && isStr(incoming().name, 1, 60))
+        );
+
+      allow delete: if signedIn() && existing().type == 'group' && me() in existing().admins;
+
+      // ---------- messages ----------
       match /messages/{messageId} {
         allow read: if isMember(chatId);
 
-        allow create: if isMember(chatId)
-          && request.resource.data.senderId == request.auth.uid
-          && request.resource.data.receiverId in chatId.split('_')
-          && request.resource.data.receiverId != request.auth.uid
-          && request.resource.data.status == 'sent'
-          && request.resource.data.text is string
-          && request.resource.data.text.size() > 0
-          && request.resource.data.text.size() <= 4000;
+        allow create: if isMemberAfter(chatId)
+          && incoming().keys().hasOnly(['senderId', 'receiverId', 'type', 'text', 'attachment',
+                                        'replyTo', 'forwarded', 'status', 'readBy',
+                                        'clientCreatedAt', 'createdAt'])
+          && incoming().senderId == me()
+          && incoming().type in ['text', 'image', 'video', 'audio', 'file', 'system']
+          && isStr(incoming().get('text', ''), 0, 4000)
+          && (incoming().type != 'text' || incoming().text.size() > 0)
+          && incoming().createdAt == request.time
+          && (
+            (isDirectId(chatId)
+              && incoming().receiverId in chatId.split('_')
+              && incoming().receiverId != me()
+              && incoming().status == 'sent'
+              && !hasBlocked(incoming().receiverId, me())
+              && !hasBlocked(me(), incoming().receiverId))
+            ||
+            (!isDirectId(chatId)
+              && !('receiverId' in incoming())
+              && (!chatAfter(chatId).get('onlyAdminsCanSend', false)
+                  || me() in chatAfter(chatId).admins
+                  || incoming().type == 'system'))
+          );
 
-        // Only the receiver may advance delivery status.
-        allow update: if isMember(chatId)
-          && request.auth.uid == resource.data.receiverId
-          && request.resource.data.diff(resource.data).affectedKeys()
-               .hasOnly(['status', 'deliveredAt', 'readAt'])
-          && request.resource.data.status in ['delivered', 'read'];
+        allow update: if isMember(chatId) && (
+          // receiver confirms delivery / read (direct chats)
+          (isDirectId(chatId) && me() == existing().get('receiverId', '')
+            && changed().hasOnly(['status', 'deliveredAt', 'readAt'])
+            && incoming().status in ['delivered', 'read'])
+          ||
+          // group member marks as read
+          (!isDirectId(chatId) && me() != existing().senderId
+            && changed().hasOnly(['readBy'])
+            && incoming().readBy.toSet() == existing().get('readBy', []).toSet().union([me()].toSet()))
+          ||
+          // sender edits a text message within 48 hours
+          (me() == existing().senderId && existing().type == 'text'
+            && !existing().get('deleted', false)
+            && changed().hasOnly(['text', 'edited', 'editedAt'])
+            && isStr(incoming().text, 1, 4000)
+            && incoming().edited == true
+            && request.time < existing().createdAt + duration.value(2, 'd'))
+          ||
+          // sender deletes for everyone
+          (me() == existing().senderId
+            && changed().hasOnly(['deleted', 'deletedAt', 'text', 'attachment', 'replyTo'])
+            && incoming().deleted == true
+            && incoming().get('text', '') == ''
+            && !('attachment' in incoming()))
+          ||
+          // anyone hides a message for themselves
+          (changed().hasOnly(['hiddenFor'])
+            && incoming().hiddenFor.toSet() == existing().get('hiddenFor', []).toSet().union([me()].toSet()))
+        );
 
-        allow delete: if false;
+        // Only used when a group admin deletes the whole group.
+        allow delete: if isGroupAdmin(chatId);
+      }
+
+      // Inline attachments (images / voice notes) for the free plan.
+      match /blobs/{blobId} {
+        allow read: if isMember(chatId);
+        allow create: if isMemberAfter(chatId)
+          && incoming().keys().hasOnly(['senderId', 'data', 'mime', 'size', 'createdAt'])
+          && incoming().senderId == me()
+          && isStr(incoming().data, 1, 950000)
+          && isStr(incoming().mime, 3, 100);
+        allow update: if false;
+        allow delete: if signedIn() && (existing().senderId == me() || isGroupAdmin(chatId));
+      }
+    }
+
+    // ---------- calls (WebRTC signaling) ----------
+    match /calls/{callId} {
+      allow get: if signedIn() && me() in existing().members;
+      allow list: if signedIn() && (existing().calleeId == me() || existing().callerId == me());
+
+      allow create: if signedIn()
+        && incoming().keys().hasOnly(['callerId', 'calleeId', 'members', 'type', 'status',
+                                      'offer', 'offerVersion', 'createdAt', 'updatedAt'])
+        && incoming().callerId == me()
+        && incoming().calleeId != me()
+        && incoming().members == [incoming().callerId, incoming().calleeId]
+        && incoming().type in ['audio', 'video']
+        && incoming().status == 'ringing'
+        && !hasBlocked(incoming().calleeId, me());
+
+      allow update: if signedIn() && me() in existing().members
+        && incoming().members == existing().members
+        && incoming().callerId == existing().callerId
+        && incoming().calleeId == existing().calleeId
+        && incoming().type == existing().type
+        && changed().hasOnly(['status', 'offer', 'offerVersion', 'answer', 'answerVersion',
+                              'answeredAt', 'endedAt', 'endedBy', 'updatedAt'])
+        && (!('offer' in changed()) || me() == existing().callerId)
+        && (!('answer' in changed()) || me() == existing().calleeId)
+        && incoming().status in ['ringing', 'accepted', 'rejected', 'ended', 'missed', 'cancelled', 'busy'];
+
+      allow delete: if false;
+
+      match /candidates/{candidateId} {
+        function call() { return get(path('calls/' + callId)).data; }
+        allow read: if signedIn() && me() in call().members;
+        allow create: if signedIn() && me() in call().members
+          && incoming().keys().hasOnly(['from', 'candidate', 'sdpMid', 'sdpMLineIndex', 'createdAt'])
+          && incoming().from == me();
+        allow update, delete: if false;
       }
     }
   }
