@@ -12,7 +12,7 @@ added (see "Required user actions").
 | Item | Status |
 | --- | --- |
 | Latest commit | see `git log` on `main` |
-| CI build | BUILD_STATUS_PLACEHOLDER |
+| CI build | Passing: debug APK builds (ARM, about 96 MB zipped). Release APK builds once the signing secrets exist. |
 | Static analysis | No issues |
 | Flutter tests | 23 passed |
 | Security rules tests (emulator) | 46 passed (Firestore + Storage) |
