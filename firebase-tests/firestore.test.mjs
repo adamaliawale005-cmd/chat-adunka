@@ -149,6 +149,20 @@ describe('usernames', () => {
       profile('bob', { username: 'samedi', usernameLower: 'samedi' })));
   });
 
+  test('the owner can re-claim their own username', async () => {
+    await setDoc(doc(db('alice'), 'usernames', 'samedi'), { uid: 'alice' });
+    await assertSucceeds(setDoc(doc(db('alice'), 'usernames', 'samedi'), { uid: 'alice' }));
+  });
+
+  test('a profile can be saved again with the same username', async () => {
+    const d = db('alice');
+    const batch = writeBatch(d);
+    batch.set(doc(d, 'usernames', 'amina'), { uid: 'alice', createdAt: serverTimestamp() });
+    batch.set(doc(d, 'users', 'alice'), profile('alice', { username: 'amina', usernameLower: 'amina' }));
+    await batch.commit();
+    await assertSucceeds(updateDoc(doc(d, 'users', 'alice'), { about: 'hello', online: true, lastSeen: serverTimestamp() }));
+  });
+
   test('invalid usernames are rejected', async () => {
     await assertFails(setDoc(doc(db('alice'), 'usernames', 'A!'), { uid: 'alice' }));
   });
@@ -158,6 +172,11 @@ describe('phone index', () => {
   test('a user can only register their own verified phone number', async () => {
     await assertSucceeds(setDoc(doc(db('alice'), 'phoneIndex', PHONE.alice), { uid: 'alice' }));
     await assertFails(setDoc(doc(db('alice'), 'phoneIndex', PHONE.bob), { uid: 'alice' }));
+  });
+
+  test('the owner can save their phone entry again', async () => {
+    await setDoc(doc(db('alice'), 'phoneIndex', PHONE.alice), { uid: 'alice' });
+    await assertSucceeds(setDoc(doc(db('alice'), 'phoneIndex', PHONE.alice), { uid: 'alice' }));
   });
 
   test('numbers can be looked up exactly but never listed', async () => {

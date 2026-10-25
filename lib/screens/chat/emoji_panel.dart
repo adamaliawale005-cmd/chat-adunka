@@ -6,12 +6,30 @@ class EmojiPanel extends StatelessWidget {
   const EmojiPanel({super.key, required this.onPick});
 
   static const List<(IconData, String)> _groups = [
-    (Icons.emoji_emotions_outlined, '😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😗 😙 😚 😋 😛 😝 😜 🤪 🤨 🧐 🤓 😎 🥳 😏 😒 😞 😔 😟 😕 🙁 😣 😖 😫 😩 🥺 😢 😭 😤 😠 😡 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤗 🤔 🤭 🤫 🤥 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕'),
-    (Icons.waving_hand_outlined, '👋 🤚 🖐 ✋ 🖖 👌 🤌 🤏 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ 👍 👎 ✊ 👊 🤛 🤜 👏 🙌 👐 🤲 🤝 🙏 💪 🫶'),
-    (Icons.favorite_border, '❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 ✨ ⭐ 🌟 🔥 💯 ✅ ❌ ❗ ❓ 💤 🎉 🎊 🎁'),
-    (Icons.pets_outlined, '🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐨 🐯 🦁 🐮 🐷 🐸 🐵 🐔 🐧 🐦 🦅 🐪 🐫 🐘 🦒 🐄 🐐 🐑 🐟 🐬 🐳 🌸 🌹 🌻 🌴 🌵 🌙 ☀️ 🌧 ⛅ 🌈'),
-    (Icons.restaurant_outlined, '☕ 🍵 🥛 🍞 🥖 🧀 🍳 🥩 🍗 🍖 🍕 🍔 🍟 🌯 🥙 🍝 🍚 🍛 🍲 🥗 🍌 🍉 🍇 🍓 🍒 🍑 🥭 🍍 🥥 🥝 🍅 🥕 🌽 🍰 🎂 🍪 🍫 🍬 🍭 🧃'),
-    (Icons.sports_soccer_outlined, '⚽ 🏀 🏈 ⚾ 🎾 🏐 🏓 🏸 🥅 🏆 🥇 🎮 🎲 🎵 🎶 🎤 🎧 📚 ✏️ 📌 📎 📷 📱 💻 ⌚ 💡 🔑 🏠 🕌 🚗 ✈️ 🚀 ⛵ 🗺 🧳 ⏰'),
+    (
+      Icons.emoji_emotions_outlined,
+      '😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😗 😙 😚 😋 😛 😝 😜 🤪 🤨 🧐 🤓 😎 🥳 😏 😒 😞 😔 😟 😕 🙁 😣 😖 😫 😩 🥺 😢 😭 😤 😠 😡 🤯 😳 🥵 🥶 😱 😨 😰 😥 😓 🤗 🤔 🤭 🤫 🤥 😶 😐 😑 😬 🙄 😯 😦 😧 😮 😲 🥱 😴 🤤 😪 😵 🤐 🥴 🤢 🤮 🤧 😷 🤒 🤕'
+    ),
+    (
+      Icons.waving_hand_outlined,
+      '👋 🤚 🖐 ✋ 🖖 👌 🤌 🤏 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ 👍 👎 ✊ 👊 🤛 🤜 👏 🙌 👐 🤲 🤝 🙏 💪 🫶'
+    ),
+    (
+      Icons.favorite_border,
+      '❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❣️ 💕 💞 💓 💗 💖 💘 💝 ✨ ⭐ 🌟 🔥 💯 ✅ ❌ ❗ ❓ 💤 🎉 🎊 🎁'
+    ),
+    (
+      Icons.pets_outlined,
+      '🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐨 🐯 🦁 🐮 🐷 🐸 🐵 🐔 🐧 🐦 🦅 🐪 🐫 🐘 🦒 🐄 🐐 🐑 🐟 🐬 🐳 🌸 🌹 🌻 🌴 🌵 🌙 ☀️ 🌧 ⛅ 🌈'
+    ),
+    (
+      Icons.restaurant_outlined,
+      '☕ 🍵 🥛 🍞 🥖 🧀 🍳 🥩 🍗 🍖 🍕 🍔 🍟 🌯 🥙 🍝 🍚 🍛 🍲 🥗 🍌 🍉 🍇 🍓 🍒 🍑 🥭 🍍 🥥 🥝 🍅 🥕 🌽 🍰 🎂 🍪 🍫 🍬 🍭 🧃'
+    ),
+    (
+      Icons.sports_soccer_outlined,
+      '⚽ 🏀 🏈 ⚾ 🎾 🏐 🏓 🏸 🥅 🏆 🥇 🎮 🎲 🎵 🎶 🎤 🎧 📚 ✏️ 📌 📎 📷 📱 💻 ⌚ 💡 🔑 🏠 🕌 🚗 ✈️ 🚀 ⛵ 🗺 🧳 ⏰'
+    ),
   ];
 
   @override
@@ -20,8 +38,7 @@ class EmojiPanel extends StatelessWidget {
     return DefaultTabController(
       length: groups.length,
       child: Column(children: [
-        TabBar(
-            tabs: [for (final g in groups) Tab(icon: Icon(g.$1, size: 20))]),
+        TabBar(tabs: [for (final g in groups) Tab(icon: Icon(g.$1, size: 20))]),
         Expanded(
           child: TabBarView(children: [
             for (final g in groups)

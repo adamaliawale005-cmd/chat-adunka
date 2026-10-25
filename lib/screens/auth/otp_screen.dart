@@ -119,7 +119,8 @@ class _OtpScreenState extends State<OtpScreen> {
           padding: const EdgeInsets.all(24),
           children: [
             Text(
-              context.tr('code_sent_to', {'phone': '\u2066${widget.phoneNumber}\u2069'}),
+              context.tr('code_sent_to',
+                  {'phone': '\u2066${widget.phoneNumber}\u2069'}),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),

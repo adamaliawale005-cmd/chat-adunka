@@ -104,8 +104,11 @@ service cloud.firestore {
     // ---------- usernames, phone index, directory ----------
     match /usernames/{username} {
       allow get: if signedIn();
-      allow list, update: if false;
+      allow list: if false;
       allow create: if signedIn() && username.matches('^[a-z][a-z0-9_]{2,19}$')
+        && incoming().keys().hasOnly(['uid', 'createdAt']) && incoming().uid == me();
+      // Re-claiming your own username (e.g. after a failed save) is allowed.
+      allow update: if signedIn() && existing().uid == me()
         && incoming().keys().hasOnly(['uid', 'createdAt']) && incoming().uid == me();
       allow delete: if signedIn() && existing().uid == me();
     }
@@ -114,8 +117,8 @@ service cloud.firestore {
     // numbers cannot be harvested with a query.
     match /phoneIndex/{phone} {
       allow get: if signedIn();
-      allow list, update: if false;
-      allow create: if signedIn() && request.auth.token.phone_number == phone
+      allow list: if false;
+      allow create, update: if signedIn() && request.auth.token.phone_number == phone
         && incoming().keys().hasOnly(['uid', 'updatedAt']) && incoming().uid == me();
       allow delete: if signedIn() && existing().uid == me();
     }
