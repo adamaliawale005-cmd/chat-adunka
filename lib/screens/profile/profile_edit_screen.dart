@@ -135,8 +135,8 @@ class _ProfileEditScreenState extends State<ProfileEditScreen> {
       setState(() {
         _saving = false;
         _error = outdated
-            ? context.tr('err_rules_outdated',
-                {'project': FirebaseConfig.projectId})
+            ? context
+                .tr('err_rules_outdated', {'project': FirebaseConfig.projectId})
             : '${context.tr('err_save_profile')}\n'
                 '${context.tr('err_save_step', {
                     'step': e.step,
