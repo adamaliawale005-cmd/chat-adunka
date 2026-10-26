@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 
 import 'firebase_options.dart';
 
@@ -73,9 +74,14 @@ class FirebaseConfig {
 
   static bool get isConfigured => source != 'missing';
 
+  /// Optional id of a Web app registered in the same project. Auth and
+  /// Firestore also work with the Android app id, so this is not required.
+  static const String _webAppId = String.fromEnvironment('FIREBASE_WEB_APP_ID');
+
   static FirebaseOptions get options => FirebaseOptions(
         apiKey: apiKey,
-        appId: appId,
+        appId: kIsWeb && _webAppId.isNotEmpty && !useEmulator ? _webAppId : appId,
+        authDomain: kIsWeb ? '$projectId.firebaseapp.com' : null,
         messagingSenderId: messagingSenderId,
         projectId: projectId,
         storageBucket: storageBucket.isEmpty ? null : storageBucket,

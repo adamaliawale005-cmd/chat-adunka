@@ -9,7 +9,7 @@
 // Run (CI does this):  flutter test integration_test/app_flow_test.dart \
 //   --dart-define=USE_FIREBASE_EMULATOR=true
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:chat_adunka/config/firebase_config.dart';
 import 'package:chat_adunka/main.dart' as app;
@@ -21,7 +21,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:path_provider/path_provider.dart';
 
 // 1x1 PNG image.
 final _png = base64Decode(
@@ -244,23 +243,20 @@ void main() {
     step('a third user cannot read the private chat');
 
     // ---- photo and voice message (same pipeline as the attach buttons) ----
-    final tmp = await getTemporaryDirectory();
-    final photo = File('${tmp.path}/e2e.png')..writeAsBytesSync(_png);
     final direct = Chat.direct(aUid, bUid);
     await AttachmentService.instance.sendFile(
         chat: direct,
         senderId: aUid,
         type: MessageType.image,
-        file: photo,
+        bytes: _png,
         name: 'e2e.png',
         mime: 'image/png');
     final voiceBytes = List<int>.generate(4000, (i) => i % 251);
-    final voice = File('${tmp.path}/voice.m4a')..writeAsBytesSync(voiceBytes);
     await AttachmentService.instance.sendFile(
         chat: direct,
         senderId: aUid,
         type: MessageType.audio,
-        file: voice,
+        bytes: Uint8List.fromList(voiceBytes),
         name: 'voice.m4a',
         mime: 'audio/mp4',
         durationMs: 1000);

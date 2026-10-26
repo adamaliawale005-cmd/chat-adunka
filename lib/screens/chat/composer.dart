@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'dart:io';
 
+import 'package:cross_file/cross_file.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -119,8 +120,8 @@ class _ComposerState extends State<Composer> {
 
   // ---------- attachments ----------
 
-  Future<void> _sendFile(MessageType type, File file, String name,
-      {int? durationMs}) async {
+  Future<void> _sendFile(MessageType type, Uint8List bytes, String name,
+      {int? durationMs, String? mime}) async {
     final reply = widget.replyTo;
     widget.onCancelReply();
     try {
@@ -128,9 +129,9 @@ class _ComposerState extends State<Composer> {
         chat: widget.chat,
         senderId: widget.me,
         type: type,
-        file: file,
+        bytes: bytes,
         name: name,
-        mime: mimeFromName(name, type),
+        mime: mime ?? mimeFromName(name, type),
         durationMs: durationMs,
         replyTo: reply,
       );
@@ -155,21 +156,25 @@ class _ComposerState extends State<Composer> {
       imageQuality: big ? 80 : 68,
     );
     if (x == null) return;
-    await _sendFile(MessageType.image, File(x.path), x.name);
+    await _sendFile(MessageType.image, await x.readAsBytes(), x.name);
   }
 
   Future<void> _pickVideo() async {
     final x = await ImagePicker().pickVideo(
         source: ImageSource.gallery, maxDuration: const Duration(minutes: 5));
     if (x == null) return;
-    await _sendFile(MessageType.video, File(x.path), x.name);
+    await _sendFile(MessageType.video, await x.readAsBytes(), x.name);
   }
 
   Future<void> _pickDocument() async {
-    final result = await FilePicker.platform.pickFiles();
+    // Browsers give the bytes directly; phones give a file path.
+    final result = await FilePicker.platform.pickFiles(withData: kIsWeb);
     final f = result?.files.single;
-    if (f == null || f.path == null) return;
-    await _sendFile(MessageType.file, File(f.path!), f.name);
+    if (f == null) return;
+    final bytes = f.bytes ??
+        (f.path != null ? await XFile(f.path!).readAsBytes() : null);
+    if (bytes == null) return;
+    await _sendFile(MessageType.file, bytes, f.name);
   }
 
   void _attachMenu() {
@@ -230,14 +235,17 @@ class _ComposerState extends State<Composer> {
         if (mounted) showSnack(context, context.tr('mic_permission_needed'));
         return;
       }
-      final dir = await getTemporaryDirectory();
-      final path =
-          '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      // Browsers record Opus/WebM; phones record AAC (.m4a).
+      var path = '';
+      if (!kIsWeb) {
+        final dir = await getTemporaryDirectory();
+        path = '${dir.path}/voice_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      }
       await rec.start(
-        const RecordConfig(
-            encoder: AudioEncoder.aacLc,
+        RecordConfig(
+            encoder: kIsWeb ? AudioEncoder.opus : AudioEncoder.aacLc,
             bitRate: 32000,
-            sampleRate: 22050,
+            sampleRate: kIsWeb ? 48000 : 22050,
             numChannels: 1),
         path: path,
       );
@@ -274,8 +282,11 @@ class _ComposerState extends State<Composer> {
       }
       final path = await rec.stop();
       if (path == null || duration < const Duration(milliseconds: 800)) return;
-      await _sendFile(MessageType.audio, File(path), 'voice.m4a',
-          durationMs: duration.inMilliseconds);
+      final bytes = await XFile(path).readAsBytes();
+      await _sendFile(
+          MessageType.audio, bytes, kIsWeb ? 'voice.webm' : 'voice.m4a',
+          durationMs: duration.inMilliseconds,
+          mime: kIsWeb ? 'audio/webm' : 'audio/mp4');
     } finally {
       await rec.dispose();
     }

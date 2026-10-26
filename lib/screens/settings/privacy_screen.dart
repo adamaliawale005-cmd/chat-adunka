@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -71,6 +72,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
               value: s.readReceipts,
               onChanged: (v) => _update(s.copyWith(readReceipts: v)),
             ),
+            if (!kIsWeb)
             SwitchListTile(
               secondary: const Icon(Icons.contacts_outlined),
               title: Text(context.tr('privacy_contacts_title')),

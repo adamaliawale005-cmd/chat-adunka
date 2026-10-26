@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -50,7 +49,7 @@ class AttachmentService {
     required Chat chat,
     required String senderId,
     required MessageType type,
-    required File file,
+    required Uint8List bytes,
     required String name,
     required String mime,
     String caption = '',
@@ -59,13 +58,12 @@ class AttachmentService {
     int? height,
     ReplyInfo? replyTo,
   }) async {
-    final size = await file.length();
+    final size = bytes.length;
     final chats = ChatService.instance;
     final id = ChatService.newId();
     final label = caption.isNotEmpty ? caption : name;
 
     Future<void> attempt() async {
-      final bytes = await file.readAsBytes();
       await _sendBytes(
         chat: chat,
         senderId: senderId,
@@ -235,18 +233,6 @@ class AttachmentService {
       final first = _cache.keys.first;
       _cacheBytes -= _cache.remove(first)!.length;
     }
-  }
-
-  /// Writes the attachment to a temporary file (for playback or opening).
-  Future<File?> toTempFile(String chatId, Attachment a, String dir) async {
-    final bytes = await load(chatId, a);
-    if (bytes == null) return null;
-    final safe = a.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-    final f = File('$dir/${a.blobId ?? a.storagePath.hashCode}_$safe');
-    if (!await f.exists() || await f.length() != bytes.length) {
-      await f.writeAsBytes(bytes, flush: true);
-    }
-    return f;
   }
 
   /// Short-lived download link for streaming a video. Only members can get

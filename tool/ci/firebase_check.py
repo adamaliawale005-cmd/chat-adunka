@@ -76,7 +76,7 @@ def clean(v: str) -> str:
 
 
 required = ["FIREBASE_API_KEY", "FIREBASE_APP_ID", "FIREBASE_MESSAGING_SENDER_ID", "FIREBASE_PROJECT_ID"]
-optional = ["FIREBASE_STORAGE_BUCKET", "TURN_URLS", "TURN_USERNAME", "TURN_CREDENTIAL"]
+optional = ["FIREBASE_STORAGE_BUCKET", "FIREBASE_WEB_APP_ID", "TURN_URLS", "TURN_USERNAME", "TURN_CREDENTIAL"]
 flags = {"STORAGE_ENABLED": "false", "EMAIL_AUTH_ENABLED": "true", "PHONE_AUTH_ENABLED": "true"}
 
 values = {k: clean(os.environ.get(k, "")) for k in required + optional}

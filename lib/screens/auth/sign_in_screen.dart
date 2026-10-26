@@ -1,5 +1,6 @@
 import 'package:country_picker/country_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -32,11 +33,12 @@ void goToAuthGate(BuildContext context) {
 
 class _SignInScreenState extends State<SignInScreen> {
   late _Method _method =
-      AppConfig.phoneAuthEnabled ? _Method.phone : _Method.email;
+      AppConfig.phoneAuthEnabled && !kIsWeb ? _Method.phone : _Method.email;
 
   @override
   Widget build(BuildContext context) {
-    final both = AppConfig.phoneAuthEnabled && AppConfig.emailAuthEnabled;
+    final both =
+        AppConfig.phoneAuthEnabled && !kIsWeb && AppConfig.emailAuthEnabled;
     return Scaffold(
       appBar: AppBar(
           title:

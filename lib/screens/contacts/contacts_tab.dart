@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -163,6 +164,7 @@ class _ContactsTabState extends State<ContactsTab> {
                         builder: (_) => CreateGroupScreen(me: widget.me),
                       )),
                     ),
+                    if (!kIsWeb)
                     ListTile(
                       leading: CircleAvatar(
                         child: _syncing

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -106,7 +107,7 @@ class NotificationService {
   AccountPrivate prefs = AccountPrivate.defaults;
 
   Future<void> _ensureLocal() async {
-    if (_localReady) return;
+    if (_localReady || kIsWeb) return;
     try {
       await _initLocal(onTap: (r) => _open(r.payload));
       _localReady = true;
@@ -141,6 +142,7 @@ class NotificationService {
     await stop();
     _uid = uid;
     await _ensureLocal();
+    if (kIsWeb) return; // Browser push needs a service worker (not set up).
     try {
       final messaging = FirebaseMessaging.instance;
       final settings = await messaging.requestPermission();

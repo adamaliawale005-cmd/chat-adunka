@@ -308,11 +308,105 @@ jobs:
           path: ci-logs/
           retention-days: 7
 
+  web:
+    name: Build web app
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # Same validated settings as the APK, so web and phones share one backend.
+      - name: Validate Firebase configuration
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_WEB_APP_ID: ${{ secrets.FIREBASE_WEB_APP_ID }}
+          TURN_URLS: ${{ secrets.TURN_URLS }}
+          TURN_USERNAME: ${{ secrets.TURN_USERNAME }}
+          TURN_CREDENTIAL: ${{ secrets.TURN_CREDENTIAL }}
+          STORAGE_ENABLED: ${{ vars.STORAGE_ENABLED }}
+          EMAIL_AUTH_ENABLED: ${{ vars.EMAIL_AUTH_ENABLED }}
+          PHONE_AUTH_ENABLED: ${{ vars.PHONE_AUTH_ENABLED }}
+        run: |
+          mkdir -p ci-logs
+          python3 tool/ci/firebase_check.py "$RUNNER_TEMP/defines.json" 2>&1 | tee ci-logs/web-firebase-check.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Build web app
+        run: |
+          flutter pub get > ci-logs/web-pubget.log 2>&1
+          flutter build web --release --base-href "/${{ github.event.repository.name }}/" \
+            --dart-define-from-file="$RUNNER_TEMP/defines.json" 2>&1 | tee ci-logs/build-web.log
+          code=${PIPESTATUS[0]}
+          # GitHub Pages serves 404.html for unknown paths; reuse the app.
+          [ $code -eq 0 ] && cp build/web/index.html build/web/404.html
+          exit $code
+
+      # Opens the built site in a real browser and checks the app starts and
+      # reaches the sign-in screen (connects to Firebase without errors).
+      - name: Browser smoke test (local)
+        run: |
+          pip install --quiet playwright==1.48.0
+          python3 -m playwright install --with-deps chromium > /dev/null 2>&1
+          python3 tool/ci/web_smoke.py --serve build/web --base "/${{ github.event.repository.name }}/" 2>&1 | tee ci-logs/web-smoke.log
+          exit ${PIPESTATUS[0]}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs-web
+          path: ci-logs/
+          retention-days: 7
+
+      - name: Package site for GitHub Pages
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy-web:
+    name: Publish web app (GitHub Pages)
+    needs: [web, rules]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
+      - uses: actions/checkout@v5
+      - name: Check the public site
+        run: |
+          mkdir -p ci-logs
+          pip install --quiet playwright==1.48.0 >/dev/null 2>&1 || true
+          python3 -m playwright install --with-deps chromium > /dev/null 2>&1
+          python3 tool/ci/web_smoke.py --url "${{ steps.deploy.outputs.page_url }}" 2>&1 | tee ci-logs/web-live.log
+          exit ${PIPESTATUS[0]}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs-web-live
+          path: ci-logs/
+          retention-days: 7
+
   # Publishes all logs to the "ci-logs" branch so they can be read with git
   # (the newest run replaces the previous one).
   report:
     name: Publish logs
-    needs: [checks, rules, e2e, build]
+    needs: [checks, rules, e2e, build, web, deploy-web]
     if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -333,6 +427,8 @@ jobs:
             echo "rules: ${{ needs.rules.result }}"
             echo "e2e: ${{ needs.e2e.result }}"
             echo "build: ${{ needs.build.result }}"
+            echo "web: ${{ needs.web.result }}"
+            echo "deploy-web: ${{ needs.deploy-web.result }}"
           } > SUMMARY.txt
           git init -q -b ci-logs
           git config user.name "github-actions[bot]"

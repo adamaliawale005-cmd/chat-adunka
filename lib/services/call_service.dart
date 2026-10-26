@@ -229,6 +229,7 @@ class CallService {
   // ---------- permissions & media ----------
 
   Future<void> _ensurePermissions(CallKind kind) async {
+    if (kIsWeb) return; // The browser shows its own permission prompt.
     final perms = [
       Permission.microphone,
       if (kind == CallKind.video) Permission.camera
@@ -411,7 +412,7 @@ class CallService {
       for (final t in stream.getTracks()) {
         await pc.addTrack(t, stream);
       }
-      await Helper.setSpeakerphoneOn(call.speakerOn);
+      await _speaker(call.speakerOn);
       final offer = await pc.createOffer({
         'offerToReceiveAudio': 1,
         'offerToReceiveVideo': kind == CallKind.video ? 1 : 0,
@@ -523,7 +524,7 @@ class CallService {
       for (final t in stream.getTracks()) {
         await pc.addTrack(t, stream);
       }
-      await Helper.setSpeakerphoneOn(call.speakerOn);
+      await _speaker(call.speakerOn);
       _signalingReady = true;
       _listenRemoteCandidates(call);
       _appliedOffer = fresh.offerVersion;
@@ -609,7 +610,7 @@ class CallService {
     final call = active.value;
     if (call == null) return;
     call.speakerOn = !call.speakerOn;
-    await Helper.setSpeakerphoneOn(call.speakerOn);
+    await _speaker(call.speakerOn);
     call.changed();
   }
 
@@ -628,7 +629,19 @@ class CallService {
     final tracks = active.value?.localStream?.getVideoTracks() ??
         const <MediaStreamTrack>[];
     if (tracks.isEmpty) return;
-    await Helper.switchCamera(tracks.first);
+    try {
+      await Helper.switchCamera(tracks.first);
+    } catch (_) {
+      // Some browsers/devices have only one camera.
+    }
+  }
+
+  /// Loudspeaker vs earpiece (phones only; browsers use the system output).
+  Future<void> _speaker(bool on) async {
+    if (kIsWeb) return;
+    try {
+      await Helper.setSpeakerphoneOn(on);
+    } catch (_) {}
   }
 
   // ---------- ending ----------
@@ -695,7 +708,7 @@ class CallService {
     call.localStream = null;
     call.pc = null;
     try {
-      await Helper.setSpeakerphoneOn(false);
+      await _speaker(false);
     } catch (_) {}
   }
 

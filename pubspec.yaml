@@ -37,6 +37,7 @@ dependencies:
   audioplayers: '>=6.1.0 <7.0.0'
   video_player: ^2.9.2
   path_provider: ^2.1.5
+  cross_file: ^0.3.4
   url_launcher: ^6.3.1
   permission_handler: '>=11.3.1 <13.0.0'
   flutter_contacts: ^1.1.9+2

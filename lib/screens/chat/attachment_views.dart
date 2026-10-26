@@ -1,9 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 
@@ -11,6 +11,7 @@ import '../../l10n/app_localizations.dart';
 import '../../models/chat_models.dart';
 import '../../services/attachment_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/temp_files.dart';
 import '../../utils/time_format.dart';
 import '../../widgets/states.dart';
 
@@ -199,10 +200,15 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
     }
     setState(() => _loading = true);
     try {
-      final dir = await getTemporaryDirectory();
-      final file = await AttachmentService.instance
-          .toTempFile(widget.chatId, widget.attachment, dir.path);
-      if (file == null) throw Exception('unavailable');
+      final a = widget.attachment;
+      final bytes = await AttachmentService.instance.load(widget.chatId, a);
+      if (bytes == null) throw Exception('unavailable');
+      // Phones play from a temporary file; browsers from in-memory data.
+      final path =
+          await writeTempFile('${a.blobId ?? a.storagePath.hashCode}_${a.name}', bytes);
+      final Source source = path != null
+          ? DeviceFileSource(path)
+          : UrlSource('data:${a.mime};base64,${base64Encode(bytes)}');
       final p = AudioPlayer();
       _player = p;
       _subs.add(p.onPlayerStateChanged.listen((s) {
@@ -217,7 +223,7 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
       _subs.add(p.onPlayerComplete.listen((_) {
         if (mounted) setState(() => _position = Duration.zero);
       }));
-      await p.play(DeviceFileSource(file.path));
+      await p.play(source);
     } catch (_) {
       if (mounted) showSnack(context, context.tr('attachment_unavailable'));
       _player?.dispose();
