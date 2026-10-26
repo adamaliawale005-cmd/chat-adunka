@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../config/app_config.dart';
+import '../../config/firebase_config.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Frequently asked questions, what the app does and does not protect,
@@ -42,7 +43,8 @@ class HelpScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: Text(context.tr('about_app')),
-            subtitle: Text('${AppConfig.appName} $appVersion'),
+            subtitle: Text('${AppConfig.appName} $appVersion\n'
+                'Firebase: ${FirebaseConfig.projectId}'),
           ),
           ListTile(
             leading: const Icon(Icons.description_outlined),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../config/firebase_config.dart';
 import '../l10n/app_localizations.dart';
 import 'auth/sign_in_screen.dart';
 import 'settings/language_sheet.dart';
@@ -81,6 +82,15 @@ class WelcomeScreen extends StatelessWidget {
                         style: theme.textTheme.bodySmall,
                         textAlign: TextAlign.center,
                       ),
+                      if (firebaseReady) ...[
+                        const SizedBox(height: 12),
+                        // Lets the owner confirm which Firebase project
+                        // this APK uses (the project id is not secret).
+                        Text(
+                          'Firebase: ${FirebaseConfig.projectId}',
+                          style: theme.textTheme.labelSmall,
+                        ),
+                      ],
                     ],
                   ),
                 ),

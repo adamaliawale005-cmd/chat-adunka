@@ -9,8 +9,47 @@ import json
 import os
 import re
 import sys
+import urllib.request
 
 EXPECTED_PROJECT = json.load(open(".firebaserc"))["projects"]["default"]
+# Other Firebase project names that were used during setup by mistake.
+KNOWN_OTHER_PROJECTS = ["chat-aduunka"]
+
+
+def describe(v: str) -> str:
+    """Describes a value without revealing it (GitHub masks secrets anyway)."""
+    if v == EXPECTED_PROJECT:
+        return f"the project id '{EXPECTED_PROJECT}'"
+    if v.rstrip(".") == EXPECTED_PROJECT:
+        return f"the project id '{EXPECTED_PROJECT}' followed by extra characters"
+    for o in KNOWN_OTHER_PROJECTS:
+        if o in v:
+            return f"a value from the other project '{o}'"
+    if re.fullmatch(r"1:\d+:[a-z]+:[0-9a-f]+", v):
+        return "an app id"
+    if re.fullmatch(r"\d+", v):
+        return "a number (looks like a project number)"
+    if v.startswith("AIza"):
+        return "an API key"
+    if v.startswith("{") or "project_info" in v:
+        return "JSON text (paste only the single value, not the file)"
+    return f"an unrecognised value of {len(v)} characters"
+
+
+def api_key_project(key: str):
+    """Asks Google which Firebase project an API key belongs to (read-only)."""
+    url = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/getProjectConfig?key=" + key
+    try:
+        with urllib.request.urlopen(url, timeout=20) as r:
+            return json.load(r).get("projectId"), None
+    except urllib.error.HTTPError as e:
+        try:
+            msg = json.load(e).get("error", {}).get("message", "")
+        except Exception:
+            msg = ""
+        return None, f"HTTP {e.code} {msg}".strip()
+    except Exception as e:  # network problems should not hide other checks
+        return None, type(e).__name__
 out_path = sys.argv[1]
 
 
@@ -59,7 +98,7 @@ else:
     if not m:
         shape = re.sub(r"[0-9]", "9", app_id)[:60]
         errors.append("FIREBASE_APP_ID has the wrong format. Expected 1:<project number>:android:<hex>, "
-                      f"got a value shaped like '{shape}' ({len(app_id)} characters). Use "
+                      f"but it contains {describe(app_id)} (shaped like '{shape}', {len(app_id)} characters). Use "
                       "client[0].client_info.mobilesdk_app_id from google-services.json.")
     else:
         number, platform, _ = m.groups()
@@ -70,6 +109,15 @@ else:
             errors.append("FIREBASE_APP_ID and FIREBASE_MESSAGING_SENDER_ID belong to different Firebase "
                           "projects (the project numbers do not match). Copy both from the same google-services.json.")
 
+    if re.fullmatch(r"AIza[0-9A-Za-z_\-]{35}", api_key):
+        key_project, problem = api_key_project(api_key)
+        if key_project is None:
+            note("warning", "Firebase API key", f"Could not ask Google which project the API key belongs to ({problem}).")
+        elif key_project != EXPECTED_PROJECT:
+            errors.append(f"FIREBASE_API_KEY belongs to {describe(key_project)}, not '{EXPECTED_PROJECT}'.")
+        else:
+            note("notice", "Firebase API key", f"Verified online: the API key belongs to '{EXPECTED_PROJECT}'.")
+
     if not re.fullmatch(r"\d{6,20}", sender):
         errors.append("FIREBASE_MESSAGING_SENDER_ID should be the project number (digits only), "
                       "project_info.project_number in google-services.json.")
@@ -77,7 +125,7 @@ else:
     if not re.fullmatch(r"[a-z0-9\-]{4,40}", project):
         errors.append("FIREBASE_PROJECT_ID has the wrong format; use project_info.project_id.")
     elif project != EXPECTED_PROJECT:
-        errors.append(f"FIREBASE_PROJECT_ID is not '{EXPECTED_PROJECT}'. The app would use a different Firebase "
+        errors.append(f"FIREBASE_PROJECT_ID contains {describe(project)}, not '{EXPECTED_PROJECT}'. The app would use a different Firebase "
                       "project than the one in .firebaserc, where AduChat's rules are published, and every "
                       "write would be refused with permission-denied. Fix the secret, or change .firebaserc if "
                       "you really moved to another project.")

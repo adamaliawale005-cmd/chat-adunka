@@ -22,6 +22,8 @@ Future<void> main() async {
         cacheSizeBytes: 100 * 1024 * 1024,
       );
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      // Diagnostic only: the project id is not a secret; keys are never logged.
+      debugPrint('AduChat: Firebase project ${FirebaseConfig.projectId}');
     } catch (e) {
       firebaseError = e;
     }
