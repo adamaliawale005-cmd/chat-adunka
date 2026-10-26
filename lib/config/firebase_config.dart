@@ -80,8 +80,7 @@ class FirebaseConfig {
 
   /// Id of the iOS app registered in the same project (needed on iPhone,
   /// iPad and Mac, where Firebase checks the app id's platform).
-  static const String _iosAppId =
-      String.fromEnvironment('FIREBASE_IOS_APP_ID');
+  static const String _iosAppId = String.fromEnvironment('FIREBASE_IOS_APP_ID');
 
   static bool get _isApple =>
       !kIsWeb &&
