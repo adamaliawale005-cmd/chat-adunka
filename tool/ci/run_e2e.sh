@@ -6,10 +6,20 @@ set -o pipefail
 mkdir -p ci-logs
 df -h / | tail -1 | sed 's/^/::notice title=Disk before e2e::/'
 adb logcat -c || true
+# Grant microphone/camera as soon as the test installs the app, so the
+# system permission dialog does not block the automated call test.
+( for i in $(seq 1 900); do
+    adb shell pm grant com.aduchat.chat_adunka android.permission.RECORD_AUDIO 2>/dev/null
+    adb shell pm grant com.aduchat.chat_adunka android.permission.CAMERA 2>/dev/null
+    sleep 2
+  done ) &
+GRANTER=$!
 
-timeout 30m flutter test integration_test/app_flow_test.dart \
+timeout 40m flutter test integration_test/app_flow_test.dart \
   --dart-define=USE_FIREBASE_EMULATOR=true -r expanded 2>&1 | tee ci-logs/e2e.log
 code=$?
+kill $GRANTER 2>/dev/null || true
+grep "E2E CALL NOT TESTED" ci-logs/e2e.log | sed 's/.*E2E CALL NOT TESTED: /::warning title=Calls::/' || true
 
 adb logcat -d -t 4000 > ci-logs/logcat.txt 2>/dev/null || true
 grep "E2E STEP PASS" ci-logs/e2e.log > ci-logs/e2e-steps.txt || true

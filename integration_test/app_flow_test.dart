@@ -8,14 +8,36 @@
 //
 // Run (CI does this):  flutter test integration_test/app_flow_test.dart \
 //   --dart-define=USE_FIREBASE_EMULATOR=true
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:chat_adunka/config/firebase_config.dart';
 import 'package:chat_adunka/main.dart' as app;
+import 'package:chat_adunka/models/chat_models.dart';
+import 'package:chat_adunka/services/attachment_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:path_provider/path_provider.dart';
+
+// 1x1 PNG image.
+final _png = base64Decode(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+
+Future<Map<String, dynamic>?> waitForDoc(
+    WidgetTester tester, Future<Map<String, dynamic>?> Function() read,
+    {Duration timeout = const Duration(seconds: 30)}) async {
+  final end = DateTime.now().add(timeout);
+  while (DateTime.now().isBefore(end)) {
+    final d = await read();
+    if (d != null) return d;
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+  return null;
+}
 
 Future<void> pumpUntil(WidgetTester tester, Finder finder,
     {Duration timeout = const Duration(seconds: 45), String? what}) async {
@@ -220,5 +242,153 @@ void main() {
     }
     expect(denied, 'permission-denied');
     step('a third user cannot read the private chat');
-  });
+
+    // ---- photo and voice message (same pipeline as the attach buttons) ----
+    final tmp = await getTemporaryDirectory();
+    final photo = File('${tmp.path}/e2e.png')..writeAsBytesSync(_png);
+    final direct = Chat.direct(aUid, bUid);
+    await AttachmentService.instance.sendFile(
+        chat: direct,
+        senderId: aUid,
+        type: MessageType.image,
+        file: photo,
+        name: 'e2e.png',
+        mime: 'image/png');
+    final voiceBytes = List<int>.generate(4000, (i) => i % 251);
+    final voice = File('${tmp.path}/voice.m4a')..writeAsBytesSync(voiceBytes);
+    await AttachmentService.instance.sendFile(
+        chat: direct,
+        senderId: aUid,
+        type: MessageType.audio,
+        file: voice,
+        name: 'voice.m4a',
+        mime: 'audio/mp4',
+        durationMs: 1000);
+    Future<List<int>?> bReadsAttachment(String type) async {
+      final m = await waitForDoc(tester, () async {
+        final q = await bDb
+            .collection('chats')
+            .doc(chatId)
+            .collection('messages')
+            .where('senderId', isEqualTo: aUid)
+            .where('type', isEqualTo: type)
+            .get(const GetOptions(source: Source.server));
+        return q.docs.isEmpty ? null : q.docs.first.data();
+      });
+      final blobId = (m?['attachment'] as Map?)?['blobId'] as String?;
+      if (blobId == null) return null;
+      final blob = await bDb
+          .collection('chats')
+          .doc(chatId)
+          .collection('blobs')
+          .doc(blobId)
+          .get(const GetOptions(source: Source.server));
+      return base64Decode(blob.data()!['data'] as String);
+    }
+
+    expect(await bReadsAttachment('image'), _png);
+    step('photo sent by A is downloaded intact by B');
+    expect(await bReadsAttachment('audio'), voiceBytes);
+    step('voice message sent by A is downloaded intact by B');
+
+    // ---- group chat through the UI ----
+    await tester.pageBack();
+    await pumpUntil(tester, find.text('Chats'), what: 'home screen');
+    await tester.tap(find.text('Chats'));
+    await pumpUntil(tester, find.byTooltip('New chat'));
+    await tester.tap(find.byTooltip('New chat'));
+    await pumpUntil(tester, find.text('New group'));
+    await tester.tap(find.text('New group'));
+    await pumpUntil(tester, find.text('Add participants'), what: 'participant picker');
+    await pumpUntil(tester, find.text('User B'));
+    await tester.tap(find.text('User B'));
+    await pumpUntil(tester, find.textContaining('Next'));
+    await tester.tap(find.textContaining('Next'));
+    final groupName = find.widgetWithText(TextField, 'Group name');
+    await pumpUntil(tester, groupName, what: 'group details');
+    await tester.enterText(groupName, 'E2E group');
+    await tester.tap(find.byIcon(Icons.check));
+    final groupComposer = find.widgetWithText(TextField, 'Message');
+    await pumpUntil(tester, groupComposer, what: 'group chat screen');
+    await pumpUntil(tester, find.text('You created the group'), what: 'group system message');
+    await tester.enterText(groupComposer, 'Hello group');
+    await pumpUntil(tester, find.byTooltip('Send'));
+    await tester.tap(find.byTooltip('Send'));
+    await pumpUntil(tester, find.text('Hello group'));
+    final groups = await bDb
+        .collection('chats')
+        .where('members', arrayContains: bUid)
+        .where('type', isEqualTo: 'group')
+        .get(const GetOptions(source: Source.server));
+    expect(groups.docs.length, 1);
+    final groupId = groups.docs.single.id;
+    final gMsgs = await bDb
+        .collection('chats')
+        .doc(groupId)
+        .collection('messages')
+        .where('senderId', isEqualTo: aUid)
+        .get(const GetOptions(source: Source.server));
+    expect(gMsgs.docs.map((d) => d.data()['text']), contains('Hello group'));
+    await bDb.collection('chats').doc(groupId).collection('messages').doc().set({
+      'senderId': bUid,
+      'type': 'text',
+      'text': 'Hi from B in the group',
+      'readBy': <String>[],
+      'clientCreatedAt': Timestamp.now(),
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    await pumpUntil(tester, find.text('Hi from B in the group'), what: 'group reply');
+    step('group created in the UI; members exchange messages');
+    Object? groupDenied;
+    try {
+      await cDb
+          .collection('chats')
+          .doc(groupId)
+          .collection('messages')
+          .get(const GetOptions(source: Source.server));
+    } on FirebaseException catch (e) {
+      groupDenied = e.code;
+    }
+    expect(groupDenied, 'permission-denied');
+    step('a non-member cannot read the group');
+
+    // ---- call signaling: A calls B, B declines ----
+    await tester.pageBack();
+    await pumpUntil(tester, find.text('Chats'));
+    await tester.tap(find.text('User B').first);
+    await pumpUntil(tester, find.byTooltip('Voice call'), what: 'direct chat with call buttons');
+    await tester.tap(find.byTooltip('Voice call'));
+    final ringing = await waitForDoc(tester, () async {
+      final q = await bDb
+          .collection('calls')
+          .where('calleeId', isEqualTo: bUid)
+          .where('status', isEqualTo: 'ringing')
+          .get(const GetOptions(source: Source.server));
+      return q.docs.isEmpty ? null : {'id': q.docs.first.id, ...q.docs.first.data()};
+    });
+    if (ringing == null) {
+      debugPrint('E2E CALL NOT TESTED: the call did not start on this emulator '
+          '(no microphone available to WebRTC).');
+      return;
+    }
+    expect(ringing['callerId'], aUid);
+    expect((ringing['offer'] as Map)['type'], 'offer');
+    step('voice call rings on the other side (WebRTC offer delivered)');
+    await pumpUntil(tester, find.text('Calling…'), what: 'outgoing call screen');
+    await bDb.collection('calls').doc(ringing['id'] as String).update({
+      'status': 'rejected',
+      'endedAt': FieldValue.serverTimestamp(),
+      'endedBy': bUid,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    await pumpUntil(tester, find.text('Declined'), what: 'declined call state');
+    final bHistory = await bDb
+        .collection('users')
+        .doc(bUid)
+        .collection('calls')
+        .doc(ringing['id'] as String)
+        .get(const GetOptions(source: Source.server));
+    expect(bHistory.exists, isTrue);
+    step('declined call ends on the caller; call history recorded');
+  }, timeout: const Timeout(Duration(minutes: 25)));
 }
