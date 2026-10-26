@@ -63,6 +63,10 @@ def api_key_project(key: str):
 out_path = sys.argv[1]
 
 
+def note(level, title, msg):
+    print(f"::{level} title={title}::{msg}")
+
+
 def clean(v: str) -> str:
     # People often paste values with quotes, a trailing comma or spaces.
     v = v.strip().strip(",").strip()
@@ -84,8 +88,27 @@ with open(out_path, "w") as f:
     json.dump(values, f)
 
 
-def note(level, title, msg):
-    print(f"::{level} title={title}::{msg}")
+def official_web_config():
+    """Public Firebase web config of the official project (not secret: it is
+    served to every browser). Used to find the project's API key, number and
+    app id when the GitHub secrets are wrong."""
+    for host in (f"{EXPECTED_PROJECT}.firebaseapp.com", f"{EXPECTED_PROJECT}.web.app"):
+        try:
+            with urllib.request.urlopen(f"https://{host}/__/firebase/init.json", timeout=20) as r:
+                return json.load(r), host
+        except Exception as e:
+            last = f"{host}: {type(e).__name__} {getattr(e, 'code', '')}"
+    return None, last
+
+
+web, where = official_web_config()
+os.makedirs("ci-logs", exist_ok=True)
+with open("ci-logs/official-web-config.json", "w") as f:
+    json.dump({"source": where, "config": web}, f, indent=2)
+if web:
+    note("notice", "Official project", f"Read the public web config of '{EXPECTED_PROJECT}' from {where}.")
+else:
+    note("warning", "Official project", f"Could not read the public web config ({where}).")
 
 
 missing = [k for k in required if not values[k]]
