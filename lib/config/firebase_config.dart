@@ -17,14 +17,16 @@ class FirebaseConfig {
 
   /// Address of the computer running the emulators, as seen from the Android
   /// emulator (10.0.2.2 is the host machine).
-  static const String emulatorHost =
-      String.fromEnvironment('FIREBASE_EMULATOR_HOST', defaultValue: '10.0.2.2');
+  static const String emulatorHost = String.fromEnvironment(
+      'FIREBASE_EMULATOR_HOST',
+      defaultValue: '10.0.2.2');
 
   static const String _defApiKey = String.fromEnvironment('FIREBASE_API_KEY');
   static const String _defAppId = String.fromEnvironment('FIREBASE_APP_ID');
   static const String _defSender =
       String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID');
-  static const String _defProject = String.fromEnvironment('FIREBASE_PROJECT_ID');
+  static const String _defProject =
+      String.fromEnvironment('FIREBASE_PROJECT_ID');
   static const String _defBucket =
       String.fromEnvironment('FIREBASE_STORAGE_BUCKET');
 
@@ -42,7 +44,8 @@ class FirebaseConfig {
               ? 'build-settings'
               : 'missing';
 
-  static String get projectId => useEmulator ? 'demo-aduchat' : OfficialFirebase.projectId;
+  static String get projectId =>
+      useEmulator ? 'demo-aduchat' : OfficialFirebase.projectId;
 
   static String get apiKey => switch (source) {
         'emulator' => 'emulator-api-key',

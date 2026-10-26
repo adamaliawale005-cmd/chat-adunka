@@ -40,12 +40,14 @@ void main() {
 
     // ---- start the app ----
     await app.main();
-    await pumpUntil(tester, find.text('Create account'), what: 'welcome screen');
+    await pumpUntil(tester, find.text('Create account'),
+        what: 'welcome screen');
     expect(find.text('Firebase: demo-aduchat'), findsOneWidget);
     step('app opens and connects to Firebase');
 
     // ---- user B (second "phone") ----
-    final bApp = await Firebase.initializeApp(name: 'userB', options: FirebaseConfig.options);
+    final bApp = await Firebase.initializeApp(
+        name: 'userB', options: FirebaseConfig.options);
     final bAuth = FirebaseAuth.instanceFor(app: bApp);
     await bAuth.useAuthEmulator(FirebaseConfig.emulatorHost, 9099);
     final bDb = FirebaseFirestore.instanceFor(app: bApp);
@@ -82,19 +84,27 @@ void main() {
     await pumpUntil(tester, find.text('Email'), what: 'sign-in screen');
     await tester.tap(find.text('Email'));
     await pumpUntil(tester, find.widgetWithText(TextField, 'Password'));
-    await tester.enterText(find.widgetWithText(TextField, 'Email'), '$usernameA@example.com');
-    await tester.enterText(find.widgetWithText(TextField, 'Password'), 'test-password-A1');
-    await tester.enterText(find.widgetWithText(TextField, 'Confirm password'), 'test-password-A1');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Email'), '$usernameA@example.com');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Password'), 'test-password-A1');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Confirm password'), 'test-password-A1');
     await tester.tap(find.widgetWithText(FilledButton, 'Create account'));
-    await pumpUntil(tester, find.text('Create your profile'), what: 'profile setup');
+    await pumpUntil(tester, find.text('Create your profile'),
+        what: 'profile setup');
     step('new account registered (email)');
 
     // ---- profile ----
-    await tester.enterText(find.widgetWithText(TextField, 'Your name'), 'User A');
-    await tester.enterText(find.widgetWithText(TextField, 'Username'), usernameA);
-    await pumpUntil(tester, find.text('Available'), what: 'username availability');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Your name'), 'User A');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Username'), usernameA);
+    await pumpUntil(tester, find.text('Available'),
+        what: 'username availability');
     await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
-    await pumpUntil(tester, find.text('Contacts'), what: 'home screen after saving the profile');
+    await pumpUntil(tester, find.text('Contacts'),
+        what: 'home screen after saving the profile');
     final aUid = FirebaseAuth.instance.currentUser!.uid;
     final saved = await bDb.collection('users').doc(aUid).get();
     expect(saved.data()?['username'], usernameA);
@@ -103,10 +113,12 @@ void main() {
 
     // ---- find user B and send a message ----
     await tester.tap(find.text('Contacts'));
-    final search = find.widgetWithText(TextField, 'Username, name or phone number');
+    final search =
+        find.widgetWithText(TextField, 'Username, name or phone number');
     await pumpUntil(tester, search, what: 'contacts search');
     await tester.enterText(search, usernameB);
-    await pumpUntil(tester, find.text('User B'), what: 'search result for user B');
+    await pumpUntil(tester, find.text('User B'),
+        what: 'search result for user B');
     step('user search by username');
     await tester.tap(find.text('User B'));
     final composer = find.widgetWithText(TextField, 'Message');
@@ -114,7 +126,8 @@ void main() {
     await tester.enterText(composer, 'Hello from A');
     await pumpUntil(tester, find.byTooltip('Send'));
     await tester.tap(find.byTooltip('Send'));
-    await pumpUntil(tester, find.text('Hello from A'), what: 'sent message bubble');
+    await pumpUntil(tester, find.text('Hello from A'),
+        what: 'sent message bubble');
 
     // ---- user B receives it ----
     final chatId = ([aUid, bUid]..sort()).join('_');
@@ -154,7 +167,8 @@ void main() {
           'unread': {aUid: FieldValue.increment(1), bUid: 0},
         },
         SetOptions(merge: true));
-    reply.set(bDb.collection('chats').doc(chatId).collection('messages').doc(), {
+    reply
+        .set(bDb.collection('chats').doc(chatId).collection('messages').doc(), {
       'senderId': bUid,
       'receiverId': aUid,
       'type': 'text',
@@ -164,7 +178,8 @@ void main() {
       'createdAt': FieldValue.serverTimestamp(),
     });
     await reply.commit();
-    await pumpUntil(tester, find.text('Hello from B'), what: "B's reply on A's screen");
+    await pumpUntil(tester, find.text('Hello from B'),
+        what: "B's reply on A's screen");
     step('reply from B is received by A in real time');
 
     // A's phone marks B's reply as read (receipts flow back to B).
@@ -185,7 +200,8 @@ void main() {
     step('read receipts reach the sender');
 
     // ---- an outsider cannot read the conversation ----
-    final cApp = await Firebase.initializeApp(name: 'userC', options: FirebaseConfig.options);
+    final cApp = await Firebase.initializeApp(
+        name: 'userC', options: FirebaseConfig.options);
     final cAuth = FirebaseAuth.instanceFor(app: cApp);
     await cAuth.useAuthEmulator(FirebaseConfig.emulatorHost, 9099);
     final cDb = FirebaseFirestore.instanceFor(app: cApp);

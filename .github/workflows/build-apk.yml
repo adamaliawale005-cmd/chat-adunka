@@ -246,7 +246,8 @@ jobs:
           else
             echo "::warning title=Debug signing::ANDROID_DEBUG_KEYSTORE_BASE64 is not set. This build uses a temporary key: Firebase phone sign-in will fail and the APK cannot update an earlier install. Run the 'Create signing keys' workflow."
           fi
-          if [ -n "$RELEASE_KEYSTORE" ] && [ -n "$RELEASE_STORE_PASSWORD" ] && [ -n "$RELEASE_KEY_ALIAS" ]; then
+          RELEASE_KEY_ALIAS="${RELEASE_KEY_ALIAS:-aduchat}"
+          if [ -n "$RELEASE_KEYSTORE" ] && [ -n "$RELEASE_STORE_PASSWORD" ]; then
             echo "$RELEASE_KEYSTORE" | base64 -d > android/app/release.keystore
             {
               echo "storeFile=release.keystore"
@@ -256,7 +257,7 @@ jobs:
             } > android/key.properties
             echo "HAS_RELEASE_KEY=true" >> "$GITHUB_ENV"
           else
-            echo "::notice title=Release signing::No release key secrets, so only the debug APK is built."
+            echo "::warning title=Release signing::Secrets ANDROID_RELEASE_KEYSTORE_BASE64 and ANDROID_RELEASE_STORE_PASSWORD are not set, so only a test (debug) APK is built and updates will not install over it. Run the 'Create signing keys' workflow once."
           fi
 
       - name: Install dependencies
@@ -297,7 +298,7 @@ jobs:
         if: env.HAS_RELEASE_KEY == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: AduChat-release-APK
+          name: AduChat-APK
           path: build/app/outputs/flutter-apk/app-release.apk
 
       - uses: actions/upload-artifact@v4
