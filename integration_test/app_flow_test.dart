@@ -299,7 +299,8 @@ void main() {
     await tester.tap(find.byTooltip('New chat'));
     await pumpUntil(tester, find.text('New group'));
     await tester.tap(find.text('New group'));
-    await pumpUntil(tester, find.text('Add participants'), what: 'participant picker');
+    await pumpUntil(tester, find.text('Add participants'),
+        what: 'participant picker');
     await pumpUntil(tester, find.text('User B'));
     await tester.tap(find.text('User B'));
     await pumpUntil(tester, find.textContaining('Next'));
@@ -310,7 +311,8 @@ void main() {
     await tester.tap(find.byIcon(Icons.check));
     final groupComposer = find.widgetWithText(TextField, 'Message');
     await pumpUntil(tester, groupComposer, what: 'group chat screen');
-    await pumpUntil(tester, find.text('You created the group'), what: 'group system message');
+    await pumpUntil(tester, find.text('You created the group'),
+        what: 'group system message');
     await tester.enterText(groupComposer, 'Hello group');
     await pumpUntil(tester, find.byTooltip('Send'));
     await tester.tap(find.byTooltip('Send'));
@@ -329,7 +331,12 @@ void main() {
         .where('senderId', isEqualTo: aUid)
         .get(const GetOptions(source: Source.server));
     expect(gMsgs.docs.map((d) => d.data()['text']), contains('Hello group'));
-    await bDb.collection('chats').doc(groupId).collection('messages').doc().set({
+    await bDb
+        .collection('chats')
+        .doc(groupId)
+        .collection('messages')
+        .doc()
+        .set({
       'senderId': bUid,
       'type': 'text',
       'text': 'Hi from B in the group',
@@ -337,7 +344,8 @@ void main() {
       'clientCreatedAt': Timestamp.now(),
       'createdAt': FieldValue.serverTimestamp(),
     });
-    await pumpUntil(tester, find.text('Hi from B in the group'), what: 'group reply');
+    await pumpUntil(tester, find.text('Hi from B in the group'),
+        what: 'group reply');
     step('group created in the UI; members exchange messages');
     Object? groupDenied;
     try {
@@ -356,7 +364,8 @@ void main() {
     await tester.pageBack();
     await pumpUntil(tester, find.text('Chats'));
     await tester.tap(find.text('User B').first);
-    await pumpUntil(tester, find.byTooltip('Voice call'), what: 'direct chat with call buttons');
+    await pumpUntil(tester, find.byTooltip('Voice call'),
+        what: 'direct chat with call buttons');
     await tester.tap(find.byTooltip('Voice call'));
     final ringing = await waitForDoc(tester, () async {
       final q = await bDb
@@ -364,7 +373,9 @@ void main() {
           .where('calleeId', isEqualTo: bUid)
           .where('status', isEqualTo: 'ringing')
           .get(const GetOptions(source: Source.server));
-      return q.docs.isEmpty ? null : {'id': q.docs.first.id, ...q.docs.first.data()};
+      return q.docs.isEmpty
+          ? null
+          : {'id': q.docs.first.id, ...q.docs.first.data()};
     });
     if (ringing == null) {
       debugPrint('E2E CALL NOT TESTED: the call did not start on this emulator '
@@ -374,7 +385,8 @@ void main() {
     expect(ringing['callerId'], aUid);
     expect((ringing['offer'] as Map)['type'], 'offer');
     step('voice call rings on the other side (WebRTC offer delivered)');
-    await pumpUntil(tester, find.text('Calling…'), what: 'outgoing call screen');
+    await pumpUntil(tester, find.text('Calling…'),
+        what: 'outgoing call screen');
     await bDb.collection('calls').doc(ringing['id'] as String).update({
       'status': 'rejected',
       'endedAt': FieldValue.serverTimestamp(),
