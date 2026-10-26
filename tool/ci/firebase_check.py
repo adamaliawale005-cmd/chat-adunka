@@ -114,6 +114,28 @@ else:
 missing = [k for k in required if not values[k]]
 errors = []
 
+
+def official_in_code():
+    """Values committed in lib/config/firebase_options.dart, if filled in."""
+    src = open("lib/config/firebase_options.dart").read()
+    def get(name):
+        mm = re.search(rf"static const String {name} = '([^']*)';", src)
+        return mm.group(1) if mm else ""
+    return {k: get(k) for k in ("projectId", "apiKey", "appId", "messagingSenderId")}
+
+
+code_cfg = official_in_code()
+if code_cfg["apiKey"] and code_cfg["appId"] and code_cfg["messagingSenderId"]:
+    # The app ignores the secrets in this case; validate the committed values.
+    os.environ["FIREBASE_SOURCE"] = "code"
+    values["FIREBASE_API_KEY"] = code_cfg["apiKey"]
+    values["FIREBASE_APP_ID"] = code_cfg["appId"]
+    values["FIREBASE_MESSAGING_SENDER_ID"] = code_cfg["messagingSenderId"]
+    values["FIREBASE_PROJECT_ID"] = code_cfg["projectId"]
+    missing = []
+    note("notice", "Firebase source",
+         "Using the official values committed in lib/config/firebase_options.dart; GitHub secrets are ignored.")
+
 if missing:
     note("warning", "Firebase not configured",
          "Missing secrets: " + ", ".join(missing) + ". The APK will open the setup screen.")

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -21,9 +22,17 @@ Future<void> main() async {
         persistenceEnabled: true,
         cacheSizeBytes: 100 * 1024 * 1024,
       );
+      if (FirebaseConfig.useEmulator) {
+        // Automated tests only: local emulators, never real data.
+        await FirebaseAuth.instance
+            .useAuthEmulator(FirebaseConfig.emulatorHost, 9099);
+        FirebaseFirestore.instance
+            .useFirestoreEmulator(FirebaseConfig.emulatorHost, 8080);
+      }
       FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
       // Diagnostic only: the project id is not a secret; keys are never logged.
-      debugPrint('AduChat: Firebase project ${FirebaseConfig.projectId}');
+      debugPrint('AduChat: Firebase project ${FirebaseConfig.projectId} '
+          '(${FirebaseConfig.source})');
     } catch (e) {
       firebaseError = e;
     }
