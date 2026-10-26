@@ -44,7 +44,14 @@ def api_key_project(key: str):
     url = "https://www.googleapis.com/identitytoolkit/v3/relyingparty/getProjectConfig?key=" + key
     try:
         with urllib.request.urlopen(url, timeout=20) as r:
-            return json.load(r).get("projectId"), None
+            data = json.load(r)
+            # Default authorized domains are <project-id>.firebaseapp.com / .web.app,
+            # which reveal the project id behind the number.
+            for d in data.get("authorizedDomains", []):
+                mm = re.fullmatch(r"([a-z0-9\-]+)\.(firebaseapp\.com|web\.app)", d)
+                if mm:
+                    return mm.group(1), None
+            return data.get("projectId"), None
     except urllib.error.HTTPError as e:
         try:
             msg = json.load(e).get("error", {}).get("message", "")
@@ -116,6 +123,10 @@ else:
         key_project, problem = api_key_project(api_key)
         if key_project is None:
             note("warning", "Firebase API key", f"Could not ask Google which project the API key belongs to ({problem}).")
+        elif key_project == EXPECTED_PROJECT:
+            note("notice", "Firebase API key", f"Verified online: the API key belongs to '{EXPECTED_PROJECT}'.")
+        elif key_project in KNOWN_OTHER_PROJECTS:
+            errors.append(f"FIREBASE_API_KEY belongs to the other project '{key_project}', not '{EXPECTED_PROJECT}'.")
         elif re.fullmatch(r"\d+", str(key_project)):
             # Google reports the project NUMBER; compare it with the other values.
             key_number = str(key_project)
