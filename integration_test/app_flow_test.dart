@@ -123,7 +123,17 @@ void main() {
         find.widgetWithText(TextField, 'Username'), usernameA);
     await pumpUntil(tester, find.text('Available'),
         what: 'username availability');
-    await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
+    // The form is a lazily built list: on a small screen with the keyboard
+    // open the button may not be built yet. Close the keyboard and scroll.
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump(const Duration(milliseconds: 500));
+    final continueButton = find.widgetWithText(FilledButton, 'Continue');
+    await tester.scrollUntilVisible(continueButton, 150,
+        scrollable: find
+            .descendant(
+                of: find.byType(ListView), matching: find.byType(Scrollable))
+            .first);
+    await tester.tap(continueButton);
     await pumpUntil(tester, find.text('Contacts'),
         what: 'home screen after saving the profile');
     final aUid = FirebaseAuth.instance.currentUser!.uid;
