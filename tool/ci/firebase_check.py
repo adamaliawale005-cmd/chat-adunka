@@ -13,7 +13,7 @@ import urllib.request
 
 EXPECTED_PROJECT = json.load(open(".firebaserc"))["projects"]["default"]
 # Other Firebase project names that were used during setup by mistake.
-KNOWN_OTHER_PROJECTS = ["chat-aduunka"]
+KNOWN_OTHER_PROJECTS = ["chat-aduunka", "chat-adunka"]
 
 
 def describe(v: str) -> str:
@@ -22,6 +22,9 @@ def describe(v: str) -> str:
         return f"the project id '{EXPECTED_PROJECT}'"
     if v.rstrip(".") == EXPECTED_PROJECT:
         return f"the project id '{EXPECTED_PROJECT}' followed by extra characters"
+    for o in KNOWN_OTHER_PROJECTS:
+        if v == o:
+            return f"the id of the other project '{o}'"
     for o in KNOWN_OTHER_PROJECTS:
         if o in v:
             return f"a value from the other project '{o}'"
@@ -113,6 +116,20 @@ else:
         key_project, problem = api_key_project(api_key)
         if key_project is None:
             note("warning", "Firebase API key", f"Could not ask Google which project the API key belongs to ({problem}).")
+        elif re.fullmatch(r"\d+", str(key_project)):
+            # Google reports the project NUMBER; compare it with the other values.
+            key_number = str(key_project)
+            app_number = m.group(1) if m else None
+            same_sender = key_number == sender
+            same_app = app_number is not None and key_number == app_number
+            note("notice", "Firebase API key",
+                 "Verified online. The API key's project number "
+                 + ("matches" if same_sender else "does NOT match") + " FIREBASE_MESSAGING_SENDER_ID and "
+                 + ("matches" if same_app else "does NOT match") + " the number inside FIREBASE_APP_ID.")
+            if not same_sender:
+                errors.append("FIREBASE_API_KEY and FIREBASE_MESSAGING_SENDER_ID come from different Firebase projects.")
+            if app_number is not None and not same_app:
+                errors.append("FIREBASE_API_KEY and FIREBASE_APP_ID come from different Firebase projects.")
         elif key_project != EXPECTED_PROJECT:
             errors.append(f"FIREBASE_API_KEY belongs to {describe(key_project)}, not '{EXPECTED_PROJECT}'.")
         else:
