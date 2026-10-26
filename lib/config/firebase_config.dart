@@ -78,9 +78,26 @@ class FirebaseConfig {
   /// Firestore also work with the Android app id, so this is not required.
   static const String _webAppId = String.fromEnvironment('FIREBASE_WEB_APP_ID');
 
+  /// Id of the iOS app registered in the same project (needed on iPhone,
+  /// iPad and Mac, where Firebase checks the app id's platform).
+  static const String _iosAppId = String.fromEnvironment('FIREBASE_IOS_APP_ID');
+
+  static bool get _isApple =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS);
+
+  static String get platformAppId {
+    if (useEmulator) return appId;
+    if (kIsWeb && _webAppId.isNotEmpty) return _webAppId;
+    if (_isApple && _iosAppId.isNotEmpty) return _iosAppId;
+    return appId;
+  }
+
   static FirebaseOptions get options => FirebaseOptions(
         apiKey: apiKey,
-        appId: kIsWeb && _webAppId.isNotEmpty && !useEmulator ? _webAppId : appId,
+        appId: platformAppId,
+        iosBundleId: _isApple ? 'com.aduchat.chatAdunka' : null,
         authDomain: kIsWeb ? '$projectId.firebaseapp.com' : null,
         messagingSenderId: messagingSenderId,
         projectId: projectId,

@@ -1,0 +1,91 @@
+name: Apple builds (iPhone, iPad, Mac)
+
+# The ios/ and macos/ folders are generated once by pushing to the branch
+# "apple-scaffold" (flutter create runs here, the result is committed back
+# to that branch for review). Once they are merged, every push builds an
+# unsigned iOS app and a macOS app to prove they compile. Signed TestFlight
+# builds need an Apple Developer account (see docs/IOS_RELEASE.md).
+on:
+  push:
+    branches: [main, dev, apple-scaffold]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apple-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scaffold:
+    if: github.ref == 'refs/heads/apple-scaffold'
+    runs-on: ubuntu-latest
+    outputs:
+      created: ${{ steps.gen.outputs.created }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - id: gen
+        name: Create iOS and macOS projects
+        run: |
+          if [ -d ios ] && [ -d macos ]; then echo "created=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          flutter create --org com.aduchat --project-name chat_adunka --platforms=ios,macos .
+          python3 tool/configure_apple.py .
+          git checkout -- lib test integration_test pubspec.yaml README.md 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f ios macos
+          git commit -m "Generate iOS and macOS projects (flutter create)"
+          git push origin HEAD:apple-scaffold
+          echo "created=true" >> "$GITHUB_OUTPUT"
+
+  ios:
+    needs: scaffold
+    if: always() && (needs.scaffold.result == 'success' || needs.scaffold.result == 'skipped')
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.ref }}
+      - name: Use latest commit (scaffold may have just added ios/)
+        run: git pull --ff-only origin "${GITHUB_REF_NAME}" || true
+      - name: Skip if iOS project not present
+        id: has
+        run: |
+          if [ -d ios ]; then echo "ok=true" >> "$GITHUB_OUTPUT"; else echo "::notice::No ios/ folder on this branch yet."; fi
+      - uses: subosito/flutter-action@v2
+        if: steps.has.outputs.ok == 'true'
+        with:
+          channel: stable
+          cache: true
+      - name: Build iOS app (unsigned) and macOS app
+        if: steps.has.outputs.ok == 'true'
+        env:
+          FIREBASE_IOS_APP_ID: ${{ secrets.FIREBASE_IOS_APP_ID }}
+        run: |
+          mkdir -p ci-logs
+          python3 tool/configure_apple.py .
+          echo "{\"FIREBASE_IOS_APP_ID\": \"${FIREBASE_IOS_APP_ID}\"}" > "$RUNNER_TEMP/apple.json"
+          flutter pub get
+          set -o pipefail
+          flutter build ios --release --no-codesign --dart-define-from-file="$RUNNER_TEMP/apple.json" 2>&1 | tee ci-logs/build-ios.log
+          if [ -d macos ]; then
+            flutter build macos --release --dart-define-from-file="$RUNNER_TEMP/apple.json" 2>&1 | tee ci-logs/build-macos.log || echo "::warning title=macOS::macOS build failed (see log)"
+          fi
+          cd build/ios/iphoneos && zip -qr ../../../AduChat-ios-unsigned.zip Runner.app
+      - uses: actions/upload-artifact@v4
+        if: steps.has.outputs.ok == 'true'
+        with:
+          name: AduChat-iOS-unsigned
+          path: AduChat-ios-unsigned.zip
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs-apple
+          path: ci-logs/
+          retention-days: 7
