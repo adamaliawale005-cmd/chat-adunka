@@ -80,7 +80,8 @@ class FirebaseConfig {
 
   static FirebaseOptions get options => FirebaseOptions(
         apiKey: apiKey,
-        appId: kIsWeb && _webAppId.isNotEmpty && !useEmulator ? _webAppId : appId,
+        appId:
+            kIsWeb && _webAppId.isNotEmpty && !useEmulator ? _webAppId : appId,
         authDomain: kIsWeb ? '$projectId.firebaseapp.com' : null,
         messagingSenderId: messagingSenderId,
         projectId: projectId,

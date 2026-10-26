@@ -204,8 +204,8 @@ class _AudioMessagePlayerState extends State<AudioMessagePlayer> {
       final bytes = await AttachmentService.instance.load(widget.chatId, a);
       if (bytes == null) throw Exception('unavailable');
       // Phones play from a temporary file; browsers from in-memory data.
-      final path =
-          await writeTempFile('${a.blobId ?? a.storagePath.hashCode}_${a.name}', bytes);
+      final path = await writeTempFile(
+          '${a.blobId ?? a.storagePath.hashCode}_${a.name}', bytes);
       final Source source = path != null
           ? DeviceFileSource(path)
           : UrlSource('data:${a.mime};base64,${base64Encode(bytes)}');

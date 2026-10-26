@@ -308,6 +308,28 @@ jobs:
           path: ci-logs/
           retention-days: 7
 
+  prod-check:
+    name: Live backend check (two accounts, aduchat-c4ee6)
+    needs: checks
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Register, message and clean up on the live project
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+        run: |
+          mkdir -p ci-logs
+          python3 tool/ci/prod_check.py 2>&1 | tee ci-logs/prod-check.log
+          exit ${PIPESTATUS[0]}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs-prod
+          path: ci-logs/
+          retention-days: 7
+
   web:
     name: Build web app
     needs: checks
@@ -406,7 +428,7 @@ jobs:
   # (the newest run replaces the previous one).
   report:
     name: Publish logs
-    needs: [checks, rules, e2e, build, web, deploy-web]
+    needs: [checks, rules, e2e, build, web, deploy-web, prod-check]
     if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -429,6 +451,7 @@ jobs:
             echo "build: ${{ needs.build.result }}"
             echo "web: ${{ needs.web.result }}"
             echo "deploy-web: ${{ needs.deploy-web.result }}"
+            echo "prod-check: ${{ needs.prod-check.result }}"
           } > SUMMARY.txt
           git init -q -b ci-logs
           git config user.name "github-actions[bot]"

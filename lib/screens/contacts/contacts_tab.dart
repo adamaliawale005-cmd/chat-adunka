@@ -165,18 +165,18 @@ class _ContactsTabState extends State<ContactsTab> {
                       )),
                     ),
                     if (!kIsWeb)
-                    ListTile(
-                      leading: CircleAvatar(
-                        child: _syncing
-                            ? const ButtonSpinner()
-                            : const Icon(Icons.contacts),
+                      ListTile(
+                        leading: CircleAvatar(
+                          child: _syncing
+                              ? const ButtonSpinner()
+                              : const Icon(Icons.contacts),
+                        ),
+                        title: Text(context.tr(syncEnabled
+                            ? 'refresh_contacts'
+                            : 'find_contacts_title')),
+                        subtitle: Text(context.tr('find_contacts_subtitle')),
+                        onTap: _syncing ? null : _sync,
                       ),
-                      title: Text(context.tr(syncEnabled
-                          ? 'refresh_contacts'
-                          : 'find_contacts_title')),
-                      subtitle: Text(context.tr('find_contacts_subtitle')),
-                      onTap: _syncing ? null : _sync,
-                    ),
                     if (_matches.isNotEmpty) ...[
                       Padding(
                         padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),

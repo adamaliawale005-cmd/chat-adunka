@@ -171,8 +171,8 @@ class _ComposerState extends State<Composer> {
     final result = await FilePicker.platform.pickFiles(withData: kIsWeb);
     final f = result?.files.single;
     if (f == null) return;
-    final bytes = f.bytes ??
-        (f.path != null ? await XFile(f.path!).readAsBytes() : null);
+    final bytes =
+        f.bytes ?? (f.path != null ? await XFile(f.path!).readAsBytes() : null);
     if (bytes == null) return;
     await _sendFile(MessageType.file, bytes, f.name);
   }

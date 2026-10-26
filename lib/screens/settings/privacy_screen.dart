@@ -73,13 +73,13 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
               onChanged: (v) => _update(s.copyWith(readReceipts: v)),
             ),
             if (!kIsWeb)
-            SwitchListTile(
-              secondary: const Icon(Icons.contacts_outlined),
-              title: Text(context.tr('privacy_contacts_title')),
-              subtitle: Text(context.tr('privacy_contacts_subtitle')),
-              value: s.contactSync,
-              onChanged: (v) => _update(s.copyWith(contactSync: v)),
-            ),
+              SwitchListTile(
+                secondary: const Icon(Icons.contacts_outlined),
+                title: Text(context.tr('privacy_contacts_title')),
+                subtitle: Text(context.tr('privacy_contacts_subtitle')),
+                value: s.contactSync,
+                onChanged: (v) => _update(s.copyWith(contactSync: v)),
+              ),
             const Divider(),
             ListTile(
               leading: const Icon(Icons.block),
