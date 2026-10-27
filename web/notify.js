@@ -86,10 +86,19 @@
                   : ('serviceWorker' in navigator ? navigator.serviceWorker.getRegistration('notify/') : Promise.resolve(null));
       return p.then(function (r) {
         if (r && r.showNotification) {
-          return r.showNotification(title, options).then(function () { return true; }, viaPage);
+          return r.showNotification(title, options).then(function () {
+            console.debug('AduChat notify: shown by service worker');
+            return true;
+          }, function (e) {
+            console.debug('AduChat notify: service worker failed (' + e + '), trying page');
+            return viaPage();
+          });
         }
         return viaPage();
-      }).catch(function () { return viaPage(); });
+      }).catch(function (e) {
+        console.debug('AduChat notify: ' + e);
+        return viaPage();
+      });
     },
     close: function (tag) {
       if (!('serviceWorker' in navigator)) return;

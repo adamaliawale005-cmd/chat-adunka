@@ -247,14 +247,14 @@ def main(url):
                 print("open tap failed:", e)
             check("Open on the banner opens the chat", opened)
             shot("4-chat-open")
-            page.go_back()
+            # Close the chat with the app's own back button (the browser's
+            # back button would leave the page).
+            tap("Back")
             page.wait_for_timeout(1500)
-            semantics()
-            try:
-                tap("Settings")
-            except Exception:
-                pass
+            tap("Settings")
             page.wait_for_timeout(3000)
+            print("Before background test: url=", page.url, "permission=",
+                  page.evaluate("Notification.permission"), flush=True)
 
             # ---- 4: page in the background ----
             set_visible(False)
