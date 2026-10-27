@@ -161,11 +161,29 @@ def main(url):
             return False
 
         def tap(name, exact=False):
-            semantics()
-            loc = page.get_by_role("button", name=name, exact=exact)
-            if loc.count() == 0:
-                loc = page.get_by_text(name, exact=exact)
-            loc.first.click(timeout=15000)
+            """Clicks a Flutter control by its visible name (button, tab, ...)."""
+            end = time.time() + 20
+            while time.time() < end:
+                semantics()
+                candidates = [page.get_by_role(r, name=name, exact=exact)
+                              for r in ("button", "tab", "link", "menuitem")]
+                candidates += [page.locator(f'[aria-label="{name}"]'),
+                               page.locator("flt-semantics").filter(has_text=re.compile(
+                                   rf"^\s*{re.escape(name)}\s*$" if exact else re.escape(name))),
+                               page.get_by_text(name, exact=exact)]
+                for loc in candidates:
+                    n = loc.count()
+                    for i in range(n - 1, -1, -1):
+                        el = loc.nth(i)
+                        try:
+                            box = el.bounding_box()
+                            if box and box["width"] > 0 and box["height"] > 0:
+                                el.click(timeout=3000, force=True)
+                                return
+                        except Exception:
+                            pass
+                page.wait_for_timeout(500)
+            raise RuntimeError(f"could not tap {name!r}")
 
         def type_into(label, text):
             semantics()
