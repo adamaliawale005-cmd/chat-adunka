@@ -134,7 +134,9 @@ def main(url):
         docs.insert(0, (b_tok, f"chats/{chat}/messages/{mid}"))
 
     with sync_playwright() as p:
-        browser = p.chromium.launch()
+        # Headless Chromium always reports notification permission as
+        # "denied", so CI runs a normal browser on a virtual display (xvfb).
+        browser = p.chromium.launch(headless=os.environ.get("HEADED") != "1")
         origin = re.match(r"https?://[^/]+", url).group(0)
         ctx = browser.new_context(viewport={"width": 412, "height": 860}, locale="en-US")
         ctx.grant_permissions(["notifications"], origin=origin)

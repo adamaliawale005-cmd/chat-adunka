@@ -457,7 +457,8 @@ jobs:
           mkdir -p ci-logs
           pip install --quiet playwright==1.48.0
           python3 -m playwright install --with-deps chromium > /dev/null 2>&1
-          python3 tool/ci/web_notify_check.py --serve build/web --base "/${{ github.event.repository.name }}/" 2>&1 | tee ci-logs/web-notify.log
+          sudo apt-get install -y -qq xvfb > /dev/null 2>&1 || true
+          HEADED=1 xvfb-run -a python3 tool/ci/web_notify_check.py --serve build/web --base "/${{ github.event.repository.name }}/" 2>&1 | tee ci-logs/web-notify.log
           exit ${PIPESTATUS[0]}
       - uses: actions/upload-artifact@v4
         if: always()
