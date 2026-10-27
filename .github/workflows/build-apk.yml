@@ -112,7 +112,21 @@ jobs:
           mkdir -p ../ci-logs
           npm install --no-audit --no-fund 2>&1 | tail -5
           npx firebase emulators:exec --project demo-aduchat --only firestore,storage "node --test --test-concurrency=1" 2>&1 | tee ../ci-logs/rules-test.log
-          exit ${PIPESTATUS[0]}
+          code=${PIPESTATUS[0]}
+          # Summary and failing tests as annotations (readable without log access).
+          grep -E "^# (tests|pass|fail) " ../ci-logs/rules-test.log | paste -sd ' ' - | sed 's/^/::notice title=Rules tests::/'
+          python3 - <<'PY'
+          import re
+          lines = open("../ci-logs/rules-test.log", errors="replace").read().splitlines()
+          for i, l in enumerate(lines):
+              if re.match(r"\s*not ok \d+ - ", l) and "# Subtest" not in l:
+                  ctx = [x.strip() for x in lines[i + 1:i + 25] if re.search(r"error|Error|expected|PERMISSION|evaluat|line|Null|Property", x)]
+                  msg = (l.strip() + " | " + " | ".join(ctx[:6]))[:1500].replace("%", "%25")
+                  print(f"::error title=Rules test failed::{msg}")
+              elif re.search(r"(Error compiling rules|Unexpected|mismatched input|Missing 'match')", l):
+                  print(f"::error title=Rules compile::{l.strip()[:900]}")
+          PY
+          exit $code
       - uses: actions/upload-artifact@v4
         if: always()
         with:
