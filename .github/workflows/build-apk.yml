@@ -279,7 +279,7 @@ jobs:
           "$AAPT2" dump badging "$apk" > ci-logs/badging.txt 2> ci-logs/badging-err.txt
           head -3 ci-logs/badging.txt; cat ci-logs/badging-err.txt | head -5
           target=$(grep -o "targetSdkVersion:'[0-9]*'" ci-logs/badging.txt | head -1 | tr -dc '0-9')
-          min=$(grep -o "^sdkVersion:'[0-9]*'" ci-logs/badging.txt | head -1 | tr -dc '0-9')
+          min=$(grep -oE "(^|[^a-zA-Z])(minSdkVersion|sdkVersion):'[0-9]+'" ci-logs/badging.txt | grep -v target | head -1 | grep -oE "[0-9]+'" | tr -dc '0-9')
           echo "::notice title=Android SDK levels::targetSdk=${target:-unknown} minSdk=${min:-unknown}"
           if [ -z "$target" ]; then
             echo "::error title=Google Play::Could not read targetSdk from the APK."
