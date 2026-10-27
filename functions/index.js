@@ -13,10 +13,13 @@
  *   firebase deploy --only functions
  */
 const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
 const { setGlobalOptions, logger } = require('firebase-functions/v2');
 const { initializeApp } = require('firebase-admin/app');
-const { getFirestore } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { getMessaging } = require('firebase-admin/messaging');
+const { turnCredentialsFor } = require('./turn');
 
 initializeApp();
 setGlobalOptions({
@@ -142,6 +145,7 @@ exports.notifyMissedCall = onDocumentUpdated('calls/{callId}', async (event) => 
   const after = event.data && event.data.after.data();
   if (!before || !after || before.status !== 'ringing') return;
   if (after.status !== 'missed' && after.status !== 'cancelled') return;
+  if (await hasBlocked(after.calleeId, after.callerId)) return;
   const p = await prefsFor(after.calleeId);
   if (!p.calls) return;
   const callerName = await nameOf(after.callerId);
@@ -151,3 +155,66 @@ exports.notifyMissedCall = onDocumentUpdated('calls/{callId}', async (event) => 
     android: { notification: { channelId: 'calls', tag: event.params.callId } },
   });
 });
+
+// ---------------------------------------------------------------------------
+// TURN relay credentials (short-lived, per user).
+//
+// Calls need a TURN relay on many mobile networks. Static TURN passwords
+// must never be built into the APK or the web app (anyone can extract
+// them and use the relay at the owner's cost). Instead the app asks this
+// function for credentials that expire after TURN_TTL_SECONDS.
+//
+// Format: the standard "TURN REST API" shared-secret scheme supported by
+// coturn (use-auth-secret / static-auth-secret) and most hosted relays:
+//   username   = "<unix expiry>:<uid>"
+//   credential = base64(HMAC-SHA1(sharedSecret, username))
+// No custom cryptography is involved.
+//
+// Owner setup (needs Blaze and a TURN server or provider; not deployed
+// automatically):
+//   firebase functions:secrets:set TURN_SHARED_SECRET
+//   functions/.env: TURN_URLS=turns:turn.example.com:5349?transport=tcp,turn:turn.example.com:3478
+//   functions/.env: ENFORCE_APP_CHECK=false   (set true once App Check metrics look healthy)
+// ---------------------------------------------------------------------------
+const TURN_SHARED_SECRET = defineSecret('TURN_SHARED_SECRET');
+const TURN_TTL_SECONDS = 6 * 3600;
+const TURN_REQUESTS_PER_HOUR = 30;
+
+/**
+ * Fixed-window rate limit stored in rateLimits/{uid}_{name}. The rules
+ * give clients no access to this collection.
+ */
+async function allowRate(uid, name, limitPerHour) {
+  const ref = db.doc(`rateLimits/${uid}_${name}`);
+  const windowStart = Math.floor(Date.now() / 3600000);
+  return db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const d = snap.exists ? snap.data() : {};
+    const count = d.window === windowStart ? (d.count || 0) : 0;
+    if (count >= limitPerHour) return false;
+    tx.set(ref, { window: windowStart, count: count + 1, updatedAt: FieldValue.serverTimestamp() });
+    return true;
+  });
+}
+
+
+exports.turnCredentials = onCall(
+  {
+    secrets: [TURN_SHARED_SECRET],
+    enforceAppCheck: process.env.ENFORCE_APP_CHECK === 'true',
+    maxInstances: 10,
+  },
+  async (request) => {
+    const uid = request.auth && request.auth.uid;
+    if (!uid) throw new HttpsError('unauthenticated', 'Sign in first.');
+    const urls = String(process.env.TURN_URLS || '').split(',').map((u) => u.trim()).filter(Boolean);
+    if (urls.length === 0) throw new HttpsError('failed-precondition', 'TURN relay is not configured.');
+    if (!(await allowRate(uid, 'turn', TURN_REQUESTS_PER_HOUR))) {
+      throw new HttpsError('resource-exhausted', 'Too many requests. Try again later.');
+    }
+    const c = turnCredentialsFor(uid, TURN_SHARED_SECRET.value(), Math.floor(Date.now() / 1000), TURN_TTL_SECONDS);
+    // Never log the credential.
+    logger.info('TURN credentials issued', { uid: uid.slice(0, 6) + '…' });
+    return { urls, username: c.username, credential: c.credential, ttlSeconds: c.ttlSeconds };
+  },
+);

@@ -95,7 +95,7 @@ def main():
     c, tc, _ = account("c")
     check("Second and third accounts registered", bool(b and c))
 
-    s, body = call("GET", f"{DB}/rulesVersion/2026-10-25", token=ta)
+    s, body = call("GET", f"{DB}/rulesVersion/2026-10-27", token=ta)
     check("Published security rules are current", s in (200, 404),
           f"HTTP {s}: publish firestore.rules (firebase deploy --only firestore:rules)")
 
@@ -122,7 +122,7 @@ def main():
     for tok, uid, text in ((ta, a, "Salaan from A"), (tb, b, "مرحبا from B")):
         mid = secrets.token_hex(8)
         s, body = write(tok, f"chats/{chat}/messages/{mid}",
-                        {"senderId": uid, "type": "text", "text": text, "status": "sent", "readBy": [uid]},
+                        {"senderId": uid, "type": "text", "text": text, "readBy": []},
                         ("createdAt", "clientCreatedAt"))
         msgs.append(mid)
         cleanup.append(("doc", ta, f"chats/{chat}/messages/{mid}"))

@@ -5,33 +5,69 @@ rules_version = '2';
 //
 // Files live at chats/{chatId}/{senderUid}/{fileName}. Only members of the
 // chat can read them; only the sender can upload or delete them.
+// Uploads are refused while either person in a direct chat has blocked
+// the other. Only common media and office document types are accepted:
+// executables, installers (APK), HTML and SVG (script carriers) and
+// unknown binary types are refused.
 service firebase.storage {
   match /b/{bucket}/o {
     function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+
+    // Same id forms as firestore.rules.
+    function isDirectId(chatId) {
+      let p = chatId.split('_');
+      return p.size() == 2 && p[0].size() > 0 && p[1].size() > 0 && p[0] < p[1];
+    }
+    function isGroupId(chatId) { return !chatId.matches('.*_.*'); }
+    function peerOf(chatId) {
+      let p = chatId.split('_');
+      return p[0] == me() ? p[1] : p[0];
+    }
 
     function isMember(chatId) {
       return signedIn() && (
-        (chatId.split('_').size() == 2 && request.auth.uid in chatId.split('_'))
-        || (chatId.split('_').size() != 2
-            && request.auth.uid in firestore.get(/databases/(default)/documents/chats/$(chatId)).data.members));
+        (isDirectId(chatId) && me() in chatId.split('_'))
+        || (isGroupId(chatId)
+            && me() in firestore.get(/databases/(default)/documents/chats/$(chatId)).data.members));
     }
 
-    function allowedType() {
-      return request.resource.contentType.matches('image/.*')
-        || request.resource.contentType.matches('video/.*')
-        || request.resource.contentType.matches('audio/.*')
-        || request.resource.contentType.matches('application/.*')
-        || request.resource.contentType.matches('text/.*');
+    function directOpen(chatId) {
+      return !isDirectId(chatId) || (
+        !firestore.exists(/databases/(default)/documents/users/$(peerOf(chatId))/blocked/$(me()))
+        && !firestore.exists(/databases/(default)/documents/users/$(me())/blocked/$(peerOf(chatId))));
+    }
+
+    function type() { return request.resource.contentType; }
+    function size() { return request.resource.size; }
+    function mb(n) { return n * 1024 * 1024; }
+
+    function allowedUpload() {
+      return (type().matches('image/(jpeg|png|webp|gif|heic|heif)') && size() <= mb(15))
+        || (type().matches('audio/(mp4|aac|mpeg|ogg|wav|webm|x-m4a)') && size() <= mb(25))
+        || (type().matches('video/(mp4|quicktime|3gpp|webm)') && size() <= mb(50))
+        || ((type() == 'application/pdf'
+             || type() == 'application/msword'
+             || type() == 'application/vnd.ms-excel'
+             || type() == 'application/vnd.ms-powerpoint'
+             || type().matches('application/vnd[.]openxmlformats-officedocument[.](wordprocessingml[.]document|spreadsheetml[.]sheet|presentationml[.]presentation)')
+             || type() == 'application/zip'
+             || type() == 'text/plain'
+             || type() == 'text/csv')
+            && size() <= mb(50));
     }
 
     match /chats/{chatId}/{senderId}/{fileName} {
       allow read: if isMember(chatId);
       allow create: if isMember(chatId)
-        && request.auth.uid == senderId
-        && request.resource.size < 50 * 1024 * 1024
-        && allowedType();
+        && me() == senderId
+        && fileName.size() <= 200
+        && !fileName.lower().matches('.*[.](apk|aab|exe|msi|bat|cmd|com|scr|js|jar|sh|ps1|vbs|dll|html?|svg|xapk)$')
+        && size() > 0
+        && allowedUpload()
+        && directOpen(chatId);
       allow update: if false;
-      allow delete: if signedIn() && request.auth.uid == senderId;
+      allow delete: if signedIn() && me() == senderId;
     }
 
     match /{allPaths=**} {

@@ -82,30 +82,31 @@ Actions > **New repository secret**. Copy the values from `google-services.json`
 The CI step **Validate Firebase configuration** checks the formats without
 printing the values.
 
-### 5. Stable signing key and SHA fingerprints (Free)
+### 5. Stable signing keys and SHA fingerprints (Free)
 
 Firebase phone sign-in only works for an app whose signing certificate is
 registered in Firebase, and every APK must be signed with the same key so
 updates install over the old version.
 
-1. GitHub > Actions > **Create signing keys (run once)** > Run workflow.
-2. Open the finished run and download the artifact
-   `aduchat-signing-keys-PRIVATE`. It is deleted automatically after one day.
-3. Open `README.txt` from the artifact and create the five secrets it lists
-   (`ANDROID_DEBUG_KEYSTORE_BASE64`, `ANDROID_RELEASE_KEYSTORE_BASE64`,
-   `ANDROID_RELEASE_STORE_PASSWORD`, `ANDROID_RELEASE_KEY_ALIAS`,
-   `ANDROID_RELEASE_KEY_PASSWORD`).
-4. Keep `release.keystore` and its password in a safe place outside GitHub.
-   **If they are lost, future versions cannot update installed apps.**
-5. Firebase > Project settings > Your apps > AduChat > **Add fingerprint**.
-   Add the SHA-1 and SHA-256 values from `README.txt` for both keys.
-6. Delete the downloaded files from your computer.
+Create the keys **on your own computer**, never in GitHub Actions: follow
+[`RELEASE_SIGNING.md`](RELEASE_SIGNING.md).
+
+* Part A: the Google Play **upload key** (kept offline with two encrypted
+  backups; used only on your computer or by the protected *Release App
+  Bundle* workflow).
+* Part B: an optional **test key** for test APKs, stored as the repository
+  secret `ANDROID_DEBUG_KEYSTORE_BASE64`.
+
+Add the SHA-1 and SHA-256 fingerprints of the test key, and later of the
+Google Play **app signing key** (Play Console > App integrity), in
+Firebase > Project settings > Your apps > AduChat > **Add fingerprint**.
 
 ### 6. Build
 
 GitHub > Actions > **AduChat CI** > Run workflow (branch `main`). When it
-finishes, download **AduChat-debug-APK** (and **AduChat-release-APK** once
-the release key secrets exist) from the run's Artifacts section.
+finishes, download **AduChat-debug-APK** (a test build) from the run's
+Artifacts section. The Google Play bundle is built separately (see
+`RELEASE_SIGNING.md`).
 
 ---
 

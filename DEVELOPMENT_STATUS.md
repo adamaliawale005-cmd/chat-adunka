@@ -16,9 +16,9 @@ checked by GitHub Actions:
 
 | Feature | Result | Evidence |
 | --- | --- | --- |
-| Android APK builds | PASS | CI (debug APK; release APK once the signing key is added) |
+| Android APK builds | PASS | CI (test/debug APK only; Google Play bundle is built separately) |
 | Google Play target API 36 | PASS | CI reads the built APK: targetSdk 36, minSdk 24 |
-| Signed App Bundle (.aab) for Google Play | WAITING | built automatically once the release-key secrets exist (see docs/PLAY_STORE_RELEASE_CHECKLIST.md) |
+| Signed App Bundle (.aab) for Google Play | WAITING | owner creates the upload key locally; built locally or by the protected Release App Bundle workflow (docs/RELEASE_SIGNING.md) |
 | App installs and opens (Android) | PASS | emulator e2e |
 | Connected to aduchat-c4ee6 | PASS | API key, app id and sender id verified online on every build |
 | Email registration (live project) | PASS | live backend check: 3 new accounts |
@@ -56,9 +56,10 @@ checked by GitHub Actions:
 ## Needs the owner
 
 1. Google Play: see docs/PLAY_STORE_RELEASE_CHECKLIST.md.
-2. Run the "Create signing keys" workflow and add its 2 secrets
-   (`ANDROID_RELEASE_KEYSTORE_BASE64`, `ANDROID_RELEASE_STORE_PASSWORD`),
-   so every APK has the same signature and updates install over each other.
+2. Create the Google Play upload key and a test key **on your own computer**
+   (docs/RELEASE_SIGNING.md). The old "Create signing keys" workflow was
+   removed: it put the key and password in a downloadable artifact of a
+   public repository (it was never run, nothing leaked).
 3. iPhone: see docs/IOS_RELEASE.md (free iOS app registration in Firebase,
    paid Apple Developer membership for TestFlight).
 4. Optional, paid (needs approval): Blaze plan for SMS sign-in, documents and

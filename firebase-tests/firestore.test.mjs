@@ -11,6 +11,8 @@ import {
 import {
   arrayUnion,
   collection,
+  increment,
+  limit,
   deleteDoc,
   doc,
   getDoc,
@@ -66,7 +68,9 @@ async function sendDirect(sender, receiver, id, text = 'hello') {
     lastMessageType: 'text',
     lastSenderId: sender,
     lastMessageAt: new Date(),
+    lastMessageId: id,
     updatedAt: serverTimestamp(),
+    unread: { [receiver]: increment(1), [sender]: 0 },
   }, { merge: true });
   batch.set(doc(d, 'chats', chatId, 'messages', id), directMessage(sender, receiver, text));
   return batch.commit();
@@ -93,9 +97,27 @@ before(async () => {
   });
 });
 
+// Every test starts with three existing accounts: alice and bob talk to
+// each other, carol is an outsider.
 beforeEach(async () => {
   await env.clearFirestore();
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    for (const uid of ['alice', 'bob', 'carol']) {
+      await setDoc(doc(ctx.firestore(), 'users', uid), {
+        uid, displayName: uid, displayNameLower: uid, about: '', createdAt: new Date(), updatedAt: new Date(),
+      });
+    }
+  });
 });
+
+// Claims a username the way the app does: in the same write as the profile.
+function claimUsername(uid, username) {
+  const d = db(uid);
+  const batch = writeBatch(d);
+  batch.set(doc(d, 'usernames', username), { uid, createdAt: serverTimestamp() });
+  batch.set(doc(d, 'users', uid), profile(uid, { username, usernameLower: username }));
+  return batch.commit();
+}
 
 after(async () => {
   await env.cleanup();
@@ -139,19 +161,27 @@ describe('usernames', () => {
   });
 
   test('a taken username cannot be claimed again', async () => {
-    await setDoc(doc(db('alice'), 'usernames', 'samedi'), { uid: 'alice' });
+    await claimUsername('alice', 'samedi');
+    await assertFails(claimUsername('bob', 'samedi'));
     await assertFails(setDoc(doc(db('bob'), 'usernames', 'samedi'), { uid: 'bob' }));
   });
 
   test('the profile cannot use a username owned by someone else', async () => {
-    await setDoc(doc(db('alice'), 'usernames', 'samedi'), { uid: 'alice' });
+    await claimUsername('alice', 'samedi');
     await assertFails(setDoc(doc(db('bob'), 'users', 'bob'),
       profile('bob', { username: 'samedi', usernameLower: 'samedi' })));
   });
 
   test('the owner can re-claim their own username', async () => {
-    await setDoc(doc(db('alice'), 'usernames', 'samedi'), { uid: 'alice' });
+    await claimUsername('alice', 'samedi');
     await assertSucceeds(setDoc(doc(db('alice'), 'usernames', 'samedi'), { uid: 'alice' }));
+  });
+
+  test('usernames cannot be reserved without using them (no squatting)', async () => {
+    await assertFails(setDoc(doc(db('alice'), 'usernames', 'reserved1'), { uid: 'alice' }));
+    await claimUsername('alice', 'amina');
+    // a second name that the profile does not use
+    await assertFails(setDoc(doc(db('alice'), 'usernames', 'reserved2'), { uid: 'alice' }));
   });
 
   test('a profile can be saved again with the same username', async () => {
@@ -164,7 +194,7 @@ describe('usernames', () => {
   });
 
   test('invalid usernames are rejected', async () => {
-    await assertFails(setDoc(doc(db('alice'), 'usernames', 'A!'), { uid: 'alice' }));
+    await assertFails(claimUsername('alice', 'A!'));
   });
 });
 
@@ -369,5 +399,15 @@ describe('reports', () => {
       reporterId: 'alice', reportedUid: 'bob', reason: 'spam', details: '', createdAt: serverTimestamp(),
     }));
     await assertFails(getDoc(doc(db('alice'), 'reports', 'r1')));
+  });
+
+  test('reports cannot be forged, self-targeted, oversized or back-dated', async () => {
+    const base = { reporterId: 'alice', reportedUid: 'bob', reason: 'spam', details: '', createdAt: serverTimestamp() };
+    await assertFails(setDoc(doc(db('alice'), 'reports', 'r2'), { ...base, reporterId: 'bob' }));
+    await assertFails(setDoc(doc(db('alice'), 'reports', 'r3'), { ...base, reportedUid: 'alice' }));
+    await assertFails(setDoc(doc(db('alice'), 'reports', 'r4'), { ...base, reason: 'x'.repeat(40) }));
+    await assertFails(setDoc(doc(db('alice'), 'reports', 'r5'), { ...base, details: 'x'.repeat(1001) }));
+    await assertFails(setDoc(doc(db('alice'), 'reports', 'r6'), { ...base, createdAt: new Date(2020, 0, 1) }));
+    await assertFails(setDoc(doc(db('alice'), 'reports', 'r7'), { ...base, isAdmin: true }));
   });
 });

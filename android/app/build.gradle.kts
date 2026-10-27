@@ -6,9 +6,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// Release signing. CI writes android/key.properties from GitHub secrets; it is
-// git-ignored and never committed. Without it, release builds fall back to the
-// debug key so `flutter build apk --release` still works for testing.
+// Release signing. android/key.properties is written only on a trusted
+// machine or by the protected "Release App Bundle" workflow; it is
+// git-ignored and never committed (see docs/RELEASE_SIGNING.md).
+// Without it, a release APK falls back to the debug key for local testing,
+// but a Google Play App Bundle (bundleRelease) refuses to build, so a
+// debug-signed bundle can never be uploaded by mistake.
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("key.properties")
 val hasReleaseKey = keystorePropertiesFile.exists()
@@ -71,4 +74,15 @@ dependencies {
 
 flutter {
     source = "../.."
+}
+
+tasks.matching { it.name == "bundleRelease" || it.name == "signReleaseBundle" }.configureEach {
+    doFirst {
+        if (!hasReleaseKey) {
+            throw GradleException(
+                "Release App Bundle needs the upload key: android/key.properties is missing. " +
+                    "See docs/RELEASE_SIGNING.md. A debug-signed bundle is never built."
+            )
+        }
+    }
 }

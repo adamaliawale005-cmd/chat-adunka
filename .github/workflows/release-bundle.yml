@@ -1,0 +1,131 @@
+name: Release App Bundle (Google Play, manual, protected)
+
+# Builds the signed Android App Bundle (.aab) for Google Play.
+#
+# * Never runs automatically: only "Run workflow" by the owner, on main.
+# * The UPLOAD key lives only in the protected "play-release" environment
+#   (Settings > Environments > play-release, with "Required reviewers" =
+#   the owner). Its secrets are not visible to pushes, pull requests or the
+#   routine CI workflow.
+# * The key is created on the owner's own computer and backed up offline
+#   (docs/RELEASE_SIGNING.md). This workflow never creates, prints or
+#   uploads a key or password; it deletes its temporary copy when done.
+# * With Play App Signing, Google holds the app signing key; this upload
+#   key can be reset through Play Console if it is ever lost or exposed.
+# * It does NOT publish anything. Uploading the .aab to Play Console is a
+#   separate, manual owner step.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-bundle
+  cancel-in-progress: false
+
+jobs:
+  bundle:
+    name: Build signed App Bundle
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: play-release
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/node_modules /opt/ghc /usr/local/.ghcup \
+            /usr/local/share/boost /usr/share/swift /opt/hostedtoolcache/CodeQL \
+            /usr/local/share/powershell /usr/local/share/chromium || true
+
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Validate Firebase configuration
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          STORAGE_ENABLED: ${{ vars.STORAGE_ENABLED }}
+          EMAIL_AUTH_ENABLED: ${{ vars.EMAIL_AUTH_ENABLED }}
+          PHONE_AUTH_ENABLED: ${{ vars.PHONE_AUTH_ENABLED }}
+        run: |
+          mkdir -p ci-logs
+          python3 tool/ci/firebase_check.py "$RUNNER_TEMP/defines.json" 2>&1 | tee ci-logs/firebase-check.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Install upload key (temporary, outside the source tree)
+        env:
+          UPLOAD_KEYSTORE: ${{ secrets.ANDROID_UPLOAD_KEYSTORE_BASE64 }}
+          UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_STORE_PASSWORD }}
+          UPLOAD_KEY_ALIAS: ${{ secrets.ANDROID_UPLOAD_KEY_ALIAS }}
+          UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_KEY_PASSWORD }}
+        run: |
+          if [ -z "$UPLOAD_KEYSTORE" ] || [ -z "$UPLOAD_STORE_PASSWORD" ] || [ -z "$UPLOAD_KEY_ALIAS" ]; then
+            echo "::error title=Upload key missing::Add ANDROID_UPLOAD_KEYSTORE_BASE64, ANDROID_UPLOAD_STORE_PASSWORD, ANDROID_UPLOAD_KEY_ALIAS (and ANDROID_UPLOAD_KEY_PASSWORD if different) as secrets of the play-release environment. See docs/RELEASE_SIGNING.md."
+            exit 1
+          fi
+          umask 077
+          mkdir -p "$RUNNER_TEMP/signing"
+          echo "$UPLOAD_KEYSTORE" | base64 -d > "$RUNNER_TEMP/signing/upload.jks"
+          {
+            echo "storeFile=$RUNNER_TEMP/signing/upload.jks"
+            echo "storePassword=$UPLOAD_STORE_PASSWORD"
+            echo "keyAlias=$UPLOAD_KEY_ALIAS"
+            echo "keyPassword=${UPLOAD_KEY_PASSWORD:-$UPLOAD_STORE_PASSWORD}"
+          } > android/key.properties
+
+      - name: Version
+        run: |
+          v=$(grep -E '^version:' pubspec.yaml | awk '{print $2}')
+          echo "::notice title=Version::$v (the number after + must be higher than every build already uploaded to Play)"
+
+      - name: Build App Bundle
+        run: |
+          flutter pub get > ci-logs/pubget.log 2>&1
+          flutter build appbundle --release --dart-define-from-file="$RUNNER_TEMP/defines.json" 2>&1 | tee ci-logs/build-aab.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Verify the bundle is signed with the upload key (not a debug key)
+        run: |
+          aab=build/app/outputs/bundle/release/app-release.aab
+          jarsigner -verify "$aab" > ci-logs/verify.log 2>&1 || { cat ci-logs/verify.log; exit 1; }
+          keytool -printcert -jarfile "$aab" > ci-logs/cert.txt
+          if grep -q "CN=Android Debug" ci-logs/cert.txt; then
+            echo "::error title=Signing::The bundle is signed with a debug key."; exit 1
+          fi
+          sha=$(grep -m1 "SHA256:" ci-logs/cert.txt | awk '{print $2}')
+          echo "::notice title=Upload certificate SHA-256 (public)::$sha"
+
+      - name: Remove the temporary key
+        if: always()
+        run: |
+          rm -rf "$RUNNER_TEMP/signing" android/key.properties
+          rm -f "$RUNNER_TEMP/defines.json"
+
+      - name: Upload App Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: AduChat-release-AAB
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 3
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs-release-bundle
+          path: ci-logs/
+          retention-days: 7

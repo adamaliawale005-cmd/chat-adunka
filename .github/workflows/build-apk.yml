@@ -103,6 +103,8 @@ jobs:
         run: |
           mkdir -p ci-logs
           node --check functions/index.js 2>&1 | tee ci-logs/functions-check.log
+          [ ${PIPESTATUS[0]} -eq 0 ] || exit 1
+          node --test functions/turn.test.js 2>&1 | tee -a ci-logs/functions-check.log
           exit ${PIPESTATUS[0]}
       - name: Run rules tests in the Firebase emulator
         working-directory: firebase-tests
@@ -232,33 +234,22 @@ jobs:
           python3 tool/ci/firebase_check.py "$RUNNER_TEMP/defines.json" 2>&1 | tee ci-logs/firebase-check.log
           exit ${PIPESTATUS[0]}
 
-      - name: Install signing keys
+      # Routine CI never sees the Google Play upload key. It only builds test
+      # (debug) APKs. A stable *test* signing key can be provided as
+      # ANDROID_DEBUG_KEYSTORE_BASE64 so test installs update each other and
+      # Firebase phone sign-in works on test phones. The upload key for
+      # Google Play is used only by the protected "Release App Bundle"
+      # workflow (see docs/RELEASE_SIGNING.md).
+      - name: Install test signing key
         env:
           DEBUG_KEYSTORE: ${{ secrets.ANDROID_DEBUG_KEYSTORE_BASE64 }}
-          RELEASE_KEYSTORE: ${{ secrets.ANDROID_RELEASE_KEYSTORE_BASE64 }}
-          RELEASE_STORE_PASSWORD: ${{ secrets.ANDROID_RELEASE_STORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.ANDROID_RELEASE_KEY_ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_RELEASE_KEY_PASSWORD }}
         run: |
           if [ -n "$DEBUG_KEYSTORE" ]; then
             mkdir -p ~/.android
-            echo "$DEBUG_KEYSTORE" | base64 -d > ~/.android/debug.keystore
-            echo "::notice title=Debug signing::Using the stable debug key from secrets."
+            ( umask 077; echo "$DEBUG_KEYSTORE" | base64 -d > ~/.android/debug.keystore )
+            echo "::notice title=Test signing::Using the stable test (debug) key from secrets."
           else
-            echo "::warning title=Debug signing::ANDROID_DEBUG_KEYSTORE_BASE64 is not set. This build uses a temporary key: Firebase phone sign-in will fail and the APK cannot update an earlier install. Run the 'Create signing keys' workflow."
-          fi
-          RELEASE_KEY_ALIAS="${RELEASE_KEY_ALIAS:-aduchat}"
-          if [ -n "$RELEASE_KEYSTORE" ] && [ -n "$RELEASE_STORE_PASSWORD" ]; then
-            echo "$RELEASE_KEYSTORE" | base64 -d > android/app/release.keystore
-            {
-              echo "storeFile=release.keystore"
-              echo "storePassword=$RELEASE_STORE_PASSWORD"
-              echo "keyAlias=$RELEASE_KEY_ALIAS"
-              echo "keyPassword=${RELEASE_KEY_PASSWORD:-$RELEASE_STORE_PASSWORD}"
-            } > android/key.properties
-            echo "HAS_RELEASE_KEY=true" >> "$GITHUB_ENV"
-          else
-            echo "::warning title=Release signing::Secrets ANDROID_RELEASE_KEYSTORE_BASE64 and ANDROID_RELEASE_STORE_PASSWORD are not set, so only a test (debug) APK is built: no release APK and no Google Play App Bundle. Run the 'Create signing keys' workflow once."
+            echo "::warning title=Test signing::ANDROID_DEBUG_KEYSTORE_BASE64 is not set. This test APK uses a temporary key: Firebase phone sign-in will fail and it cannot update an earlier install. Create a test key on your own computer (docs/RELEASE_SIGNING.md, part B)."
           fi
 
       - name: Install dependencies
@@ -290,53 +281,23 @@ jobs:
             exit 1
           fi
 
-      - name: Build release APK
-        if: env.HAS_RELEASE_KEY == 'true'
-        run: |
-          flutter build apk --release --target-platform android-arm,android-arm64 --dart-define-from-file="$RUNNER_TEMP/defines.json" 2>&1 | tee ci-logs/build-release.log
-          exit ${PIPESTATUS[0]}
-
-      # Google Play upload format. Only built with the permanent release key;
-      # never signed with a debug or temporary key.
-      - name: Build release App Bundle (Google Play)
-        if: env.HAS_RELEASE_KEY == 'true'
-        run: |
-          flutter build appbundle --release --dart-define-from-file="$RUNNER_TEMP/defines.json" 2>&1 | tee ci-logs/build-aab.log
-          exit ${PIPESTATUS[0]}
-
-      - name: Signing fingerprints (add these in Firebase)
+      # Certificate fingerprints are public values (they are also inside
+      # every APK); no password or key material is printed.
+      - name: Test-key fingerprints (add these in Firebase for test phones)
         if: always()
         run: |
           {
-            echo "Debug key:"
+            echo "Test (debug) key:"
             keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android 2>/dev/null | grep -E "SHA1:|SHA256:"
-            if [ -f android/app/release.keystore ]; then
-              echo "Release key:"
-              keytool -list -v -keystore android/app/release.keystore -storepass "$(grep storePassword android/key.properties | cut -d= -f2-)" 2>/dev/null | grep -E "SHA1:|SHA256:"
-            fi
           } | tee ci-logs/fingerprints.log
           echo "::notice title=SHA fingerprints::$(tr '\n' ' ' < ci-logs/fingerprints.log)"
-          rm -f android/key.properties android/app/release.keystore
+          rm -f ~/.android/debug.keystore
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
           name: AduChat-debug-APK
           path: build/app/outputs/flutter-apk/app-debug.apk
-
-      - name: Upload release APK
-        if: env.HAS_RELEASE_KEY == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: AduChat-APK
-          path: build/app/outputs/flutter-apk/app-release.apk
-
-      - name: Upload release App Bundle
-        if: env.HAS_RELEASE_KEY == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: AduChat-release-AAB
-          path: build/app/outputs/bundle/release/app-release.aab
 
       - uses: actions/upload-artifact@v4
         if: always()

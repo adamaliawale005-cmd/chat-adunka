@@ -15,8 +15,8 @@ cannot be changed after the first upload).
 | --- | --- | --- |
 | Target API level 36 (Android 16) or later | DONE | `android/app/build.gradle.kts` sets `targetSdk` to at least 36; CI reads the built APK and fails below 36 |
 | Minimum Android version | DONE | API 23 (Android 6.0), needed by Firebase Auth and WebRTC |
-| Signed release App Bundle (`.aab`) | TODO | CI builds `AduChat-release-AAB` **only** when the release-key secrets exist. It is never signed with a debug or temporary key. Owner: run the **Create signing keys** workflow and add `ANDROID_RELEASE_KEYSTORE_BASE64` and `ANDROID_RELEASE_STORE_PASSWORD` as repository secrets |
-| Keep the upload key safe | TODO | Store the keystore file and password offline (two copies). If lost, an upload-key reset through Play support is needed. Enroll in **Play App Signing** (default for new apps) |
+| Signed release App Bundle (`.aab`) | TODO | Owner creates the **upload key on their own computer** (`docs/RELEASE_SIGNING.md`, Part A) and builds the `.aab` locally, or with the manual, approval-protected **Release App Bundle** workflow (`play-release` environment). Gradle refuses to build a release bundle without the upload key, and the workflow fails if the bundle is debug-signed. Routine CI never sees the upload key |
+| Keep the upload key safe | TODO | Password in a password manager; two encrypted offline backups. If lost or exposed, request an upload-key reset through Play Console (possible with **Play App Signing**, the default for new apps). Never generate or store keys in Actions artifacts |
 | Version code increases with every upload | TODO | `version:` in `pubspec.yaml` (currently `2.0.0+3`; the number after `+` must grow each upload) |
 | Firebase SHA fingerprints | TODO | After enabling Play App Signing, add the **app signing key** SHA-1/SHA-256 from Play Console to Firebase (Project settings > Android app). Needed for phone sign-in and App Check |
 
