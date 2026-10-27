@@ -136,3 +136,15 @@ or account.
    recorded terms acceptance, deletion web page, report review tooling.
 5. Device test plan on at least two physical Android phones (+ one Huawei),
    then closed test with 12+ testers for 14 days.
+
+## CI results (PR #2, commit 196b56d, run 40552895526)
+
+| Job | Result |
+| --- | --- |
+| Credentials scan, format, analyze, unit/widget tests | success |
+| Firestore + Storage rules tests (emulator) | success — **109/109** (was 60) |
+| TURN credential unit tests (`functions/turn.test.js`) | success — 3/3 |
+| End-to-end on Android emulator (register, profile, search, A↔B messages, receipts, outsider denied, photo, voice note, group, non-member denied, call rings, decline) | success — all 15 steps, under the new rules |
+| Android APK build, targetSdk 36 | success |
+| Web build + browser smoke test | success |
+| Live backend check, web notifications, deploy | skipped on pull requests (run on `main` after merge) |
