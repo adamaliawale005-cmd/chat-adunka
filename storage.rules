@@ -38,23 +38,23 @@ service firebase.storage {
         && !firestore.exists(/databases/(default)/documents/users/$(me())/blocked/$(peerOf(chatId))));
     }
 
-    function type() { return request.resource.contentType; }
-    function size() { return request.resource.size; }
+    function ctype() { return request.resource.contentType; }
+    function fsize() { return request.resource.size; }
     function mb(n) { return n * 1024 * 1024; }
 
     function allowedUpload() {
-      return (type().matches('image/(jpeg|png|webp|gif|heic|heif)') && size() <= mb(15))
-        || (type().matches('audio/(mp4|aac|mpeg|ogg|wav|webm|x-m4a)') && size() <= mb(25))
-        || (type().matches('video/(mp4|quicktime|3gpp|webm)') && size() <= mb(50))
-        || ((type() == 'application/pdf'
-             || type() == 'application/msword'
-             || type() == 'application/vnd.ms-excel'
-             || type() == 'application/vnd.ms-powerpoint'
-             || type().matches('application/vnd[.]openxmlformats-officedocument[.](wordprocessingml[.]document|spreadsheetml[.]sheet|presentationml[.]presentation)')
-             || type() == 'application/zip'
-             || type() == 'text/plain'
-             || type() == 'text/csv')
-            && size() <= mb(50));
+      return (ctype().matches('image/(jpeg|png|webp|gif|heic|heif)') && fsize() <= mb(15))
+        || (ctype().matches('audio/(mp4|aac|mpeg|ogg|wav|webm|x-m4a)') && fsize() <= mb(25))
+        || (ctype().matches('video/(mp4|quicktime|3gpp|webm)') && fsize() <= mb(50))
+        || ((ctype() == 'application/pdf'
+             || ctype() == 'application/msword'
+             || ctype() == 'application/vnd.ms-excel'
+             || ctype() == 'application/vnd.ms-powerpoint'
+             || ctype().matches('application/vnd[.]openxmlformats-officedocument[.](wordprocessingml[.]document|spreadsheetml[.]sheet|presentationml[.]presentation)')
+             || ctype() == 'application/zip'
+             || ctype() == 'text/plain'
+             || ctype() == 'text/csv')
+            && fsize() <= mb(50));
     }
 
     match /chats/{chatId}/{senderId}/{fileName} {
@@ -63,7 +63,7 @@ service firebase.storage {
         && me() == senderId
         && fileName.size() <= 200
         && !fileName.lower().matches('.*[.](apk|aab|exe|msi|bat|cmd|com|scr|js|jar|sh|ps1|vbs|dll|html?|svg|xapk)$')
-        && size() > 0
+        && fsize() > 0
         && allowedUpload()
         && directOpen(chatId);
       allow update: if false;
