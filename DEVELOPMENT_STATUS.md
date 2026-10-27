@@ -1,6 +1,6 @@
 # AduChat development status
 
-_Last updated: 26 October 2026_
+_Last updated: 27 October 2026_
 
 One Firebase backend for every platform: **aduchat-c4ee6**. Every push is
 checked by GitHub Actions:
@@ -17,6 +17,8 @@ checked by GitHub Actions:
 | Feature | Result | Evidence |
 | --- | --- | --- |
 | Android APK builds | PASS | CI (debug APK; release APK once the signing key is added) |
+| Google Play target API 36 | PASS | CI reads the built APK: targetSdk 36, minSdk 24 |
+| Signed App Bundle (.aab) for Google Play | WAITING | built automatically once the release-key secrets exist (see docs/PLAY_STORE_RELEASE_CHECKLIST.md) |
 | App installs and opens (Android) | PASS | emulator e2e |
 | Connected to aduchat-c4ee6 | PASS | API key, app id and sender id verified online on every build |
 | Email registration (live project) | PASS | live backend check: 3 new accounts |
@@ -34,7 +36,7 @@ checked by GitHub Actions:
 | Voice call signaling | PASS | emulator e2e (rings, decline, call history) |
 | Call audio/video on real devices | NOT TESTED | needs two physical devices |
 | Web app builds and starts | PASS | Chromium smoke test reaches the sign-in screen |
-| Public web URL | PENDING | needs 2 GitHub settings from the owner (see below) |
+| Public web URL | PASS | https://adamaliawale005-cmd.github.io/chat-adunka/ (deployed and checked by CI) |
 | iPhone/iPad app compiles | PASS | unsigned iOS build on macOS runner |
 | Mac app compiles | PASS | macOS build on macOS runner |
 | iPhone install / TestFlight | NOT AVAILABLE | needs Apple Developer account (paid) |
@@ -42,15 +44,18 @@ checked by GitHub Actions:
 | Phone (SMS) registration | NOT AVAILABLE | Firebase SMS needs the Blaze plan; hidden on web |
 | Documents and videos | NOT AVAILABLE | need Cloud Storage (Blaze plan) |
 | Push when app is closed | NOT AVAILABLE | needs Cloud Functions (Blaze plan) |
-| Notifications while app runs | NOT TESTED | implemented on Android/iOS; not automated |
+| Web: in-app banner for new messages (page on screen) | PASS | real-browser CI check with two accounts on aduchat-c4ee6 |
+| Web: unread count in tab title, Open goes to the chat | PASS | real-browser CI check |
+| Web: system notification while the tab/web app is in the background | PASS | real-browser CI check (Chromium, notifications allowed) |
+| Web: tapped notification opens the chat after reload | PASS | real-browser CI check (`?open=chat:<id>` link) |
+| Web: notifications when the browser/web app is fully closed | NOT AVAILABLE | needs FCM Web Push + deployed Cloud Functions (Blaze) |
+| Android: notifications while the app runs | NOT TESTED | implemented (local notifications); not automated on a phone |
 | English / Somali / Arabic (RTL) | PASS | widget tests: all keys in 3 languages, RTL layout |
 | Security audit before going public | PASS | docs/SECURITY_AUDIT.md |
 
 ## Needs the owner
 
-1. Make the repository public, and set Pages source to "GitHub Actions"
-   (Settings > Pages). The site then appears at
-   https://adamaliawale005-cmd.github.io/chat-adunka/
+1. Google Play: see docs/PLAY_STORE_RELEASE_CHECKLIST.md.
 2. Run the "Create signing keys" workflow and add its 2 secrets
    (`ANDROID_RELEASE_KEYSTORE_BASE64`, `ANDROID_RELEASE_STORE_PASSWORD`),
    so every APK has the same signature and updates install over each other.
