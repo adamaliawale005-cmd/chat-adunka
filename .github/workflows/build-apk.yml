@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - dev
+      - 'feature/**'
   pull_request:
     branches:
       - main
@@ -389,11 +390,45 @@ jobs:
           path: ci-logs/
           retention-days: 7
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: build/web
+          retention-days: 3
+
       - name: Package site for GitHub Pages
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
         with:
           path: build/web
+
+  web-notify:
+    name: Web notifications in a real browser (two accounts, aduchat-c4ee6)
+    needs: web
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          name: web-build
+          path: build/web
+      - name: Sign in on the web app and receive notifications
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+        run: |
+          mkdir -p ci-logs
+          pip install --quiet playwright==1.48.0
+          python3 -m playwright install --with-deps chromium > /dev/null 2>&1
+          python3 tool/ci/web_notify_check.py --serve build/web --base "/${{ github.event.repository.name }}/" 2>&1 | tee ci-logs/web-notify.log
+          exit ${PIPESTATUS[0]}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logs-web-notify
+          path: ci-logs/
+          retention-days: 7
 
   deploy-web:
     name: Publish web app (GitHub Pages)
@@ -428,7 +463,7 @@ jobs:
   # (the newest run replaces the previous one).
   report:
     name: Publish logs
-    needs: [checks, rules, e2e, build, web, deploy-web, prod-check]
+    needs: [checks, rules, e2e, build, web, web-notify, deploy-web, prod-check]
     if: always() && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -450,6 +485,7 @@ jobs:
             echo "e2e: ${{ needs.e2e.result }}"
             echo "build: ${{ needs.build.result }}"
             echo "web: ${{ needs.web.result }}"
+            echo "web-notify: ${{ needs.web-notify.result }}"
             echo "deploy-web: ${{ needs.deploy-web.result }}"
             echo "prod-check: ${{ needs.prod-check.result }}"
           } > SUMMARY.txt

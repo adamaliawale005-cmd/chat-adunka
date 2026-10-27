@@ -1,7 +1,10 @@
 import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app.dart';
 import '../l10n/app_localizations.dart';
@@ -12,6 +15,7 @@ import '../services/call_service.dart';
 import '../services/chat_service.dart';
 import '../services/notification_service.dart';
 import '../services/user_service.dart';
+import '../services/web_notify.dart';
 import '../state/session.dart';
 import 'calls/call_screen.dart';
 import 'calls/calls_tab.dart';
@@ -64,8 +68,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           !c.isGroup && c.lastSenderId.isNotEmpty && c.lastSenderId != _uid);
       ChatService.instance.markDelivered(_uid, pending.map((c) => c.id));
       if (mounted) {
-        NotificationService.instance
-            .onChatsChanged(_uid, chats, tr: (k) => context.tr(k));
+        NotificationService.instance.openLabel = context.tr('open');
+        NotificationService.instance.onChatsChanged(_uid, chats,
+            tr: (k) => context.tr(k), blocked: Session.blocked.value);
+        _updateTitle(chats);
       }
     }, onError: (_) {}));
 
@@ -119,13 +125,45 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _setOnline(bool online) =>
       UserService.instance.setPresence(_uid, online: online);
 
+  /// Browser tab title shows the number of unread chats, e.g. "(2) AduChat".
+  void _updateTitle(List<Chat> chats) {
+    if (!kIsWeb) return;
+    final n = chats.where((c) => c.unreadFor(_uid) > 0).length;
+    SystemChrome.setApplicationSwitcherDescription(ApplicationSwitcherDescription(
+      label: n > 0 ? '($n) AduChat' : 'AduChat',
+      primaryColor: Theme.of(context).colorScheme.primary.toARGB32(),
+    ));
+  }
+
   void _showIncoming(CallDoc call) {
     if (_incomingOpen || Session.blocked.value.contains(call.callerId)) return;
     _incomingOpen = true;
+    // In a browser tab that is in the background, also show a system
+    // notification so the call is not missed.
+    if (kIsWeb && Session.settings.value.notifyCalls) _notifyIncomingWeb(call);
     rootNavigatorKey.currentState
         ?.push(MaterialPageRoute(
             builder: (_) => IncomingCallScreen(call: call, me: _uid)))
-        .whenComplete(() => _incomingOpen = false);
+        .whenComplete(() {
+      _incomingOpen = false;
+      if (kIsWeb) WebNotify.close('call:${call.id}');
+    });
+  }
+
+  Future<void> _notifyIncomingWeb(CallDoc call) async {
+    final caller = await UserService.instance.getUser(call.callerId);
+    if (!mounted) return;
+    final kind = call.kind == CallKind.video
+        ? context.tr('incoming_video_call')
+        : context.tr('incoming_voice_call');
+    if (!WebNotify.pageVisible) {
+      await WebNotify.show(
+        title: kind,
+        body: caller.hasProfile ? caller.displayName : '',
+        tag: 'call:${call.id}',
+        urgent: true,
+      );
+    }
   }
 
   Future<void> _openPayload(String payload) async {
@@ -184,15 +222,20 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ];
     return Scaffold(
       appBar: AppBar(title: Text(titles[_tab])),
-      body: IndexedStack(
-        index: _tab,
-        children: [
-          ChatsTab(me: _uid),
-          ContactsTab(me: _uid, authUser: widget.authUser),
-          CallsTab(me: _uid, active: _tab == 2),
-          SettingsTab(me: widget.me, authUser: widget.authUser),
-        ],
-      ),
+      body: Column(children: [
+        if (kIsWeb && _tab == 0) const WebNotificationPrompt(),
+        Expanded(
+          child: IndexedStack(
+            index: _tab,
+            children: [
+              ChatsTab(me: _uid),
+              ContactsTab(me: _uid, authUser: widget.authUser),
+              CallsTab(me: _uid, active: _tab == 2),
+              SettingsTab(me: widget.me, authUser: widget.authUser),
+            ],
+          ),
+        ),
+      ]),
       floatingActionButton: _tab == 0
           ? FloatingActionButton(
               tooltip: context.tr('new_chat'),
@@ -222,7 +265,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       label: Text('$unreadChats'),
                       child: const Icon(Icons.chat_bubble_outline),
                     ),
-                    selectedIcon: const Icon(Icons.chat_bubble),
+                    selectedIcon: Badge(
+                      isLabelVisible: unreadChats > 0,
+                      label: Text('$unreadChats'),
+                      child: const Icon(Icons.chat_bubble),
+                    ),
                     label: context.tr('chats'),
                   ),
                   NavigationDestination(
@@ -236,7 +283,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       label: Text('$missed'),
                       child: const Icon(Icons.call_outlined),
                     ),
-                    selectedIcon: const Icon(Icons.call),
+                    selectedIcon: Badge(
+                      isLabelVisible: missed > 0,
+                      label: Text('$missed'),
+                      child: const Icon(Icons.call),
+                    ),
                     label: context.tr('calls'),
                   ),
                   NavigationDestination(
@@ -249,6 +300,86 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             },
           );
         },
+      ),
+    );
+  }
+}
+
+
+/// Web only: asks once whether AduChat may show browser notifications.
+/// Browsers only allow the question after a tap, so this is a banner with a
+/// button rather than an automatic prompt.
+class WebNotificationPrompt extends StatefulWidget {
+  const WebNotificationPrompt({super.key});
+
+  @override
+  State<WebNotificationPrompt> createState() => _WebNotificationPromptState();
+}
+
+class _WebNotificationPromptState extends State<WebNotificationPrompt> {
+  static const _dismissedKey = 'web_notify_prompt_dismissed';
+  bool _hidden = true;
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((p) {
+      if (mounted && p.getBool(_dismissedKey) != true) {
+        setState(() => _hidden = false);
+      }
+    }, onError: (_) {
+      if (mounted) setState(() => _hidden = false);
+    });
+  }
+
+  Future<void> _dismiss() async {
+    setState(() => _hidden = true);
+    try {
+      (await SharedPreferences.getInstance()).setBool(_dismissedKey, true);
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hidden || WebNotify.permission != 'default') {
+      return const SizedBox.shrink();
+    }
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 8, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(children: [
+              Icon(Icons.notifications_active_outlined,
+                  color: scheme.onSecondaryContainer),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(context.tr('browser_notifications_ask'),
+                    style: TextStyle(color: scheme.onSecondaryContainer)),
+              ),
+            ]),
+            OverflowBar(
+              alignment: MainAxisAlignment.end,
+              spacing: 8,
+              children: [
+                TextButton(
+                  onPressed: _dismiss,
+                  child: Text(context.tr('not_now')),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    await WebNotify.requestPermission();
+                    if (mounted) setState(() => _hidden = true);
+                  },
+                  child: Text(context.tr('allow')),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

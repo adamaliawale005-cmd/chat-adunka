@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/app_user.dart';
 import '../../services/user_service.dart';
+import '../../services/web_notify.dart';
 import '../../state/session.dart';
 import '../../widgets/states.dart';
 
@@ -21,6 +22,7 @@ class NotificationSettingsScreen extends StatefulWidget {
 class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     with WidgetsBindingObserver {
   PermissionStatus? _permission;
+  String _webPermission = 'unsupported';
 
   @override
   void initState() {
@@ -41,12 +43,20 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
   }
 
   Future<void> _check() async {
-    if (kIsWeb) return;
+    if (kIsWeb) {
+      if (mounted) setState(() => _webPermission = WebNotify.permission);
+      return;
+    }
     final s = await Permission.notification.status;
     if (mounted) setState(() => _permission = s);
   }
 
   Future<void> _request() async {
+    if (kIsWeb) {
+      await WebNotify.requestPermission();
+      await _check();
+      return;
+    }
     final s = await Permission.notification.request();
     if (s.isPermanentlyDenied) await openAppSettings();
     await _check();
@@ -60,6 +70,47 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
     }
   }
 
+  /// Browser permission for system notifications (web app only).
+  Widget _webTile(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    switch (_webPermission) {
+      case 'granted':
+        return ListTile(
+          leading: Icon(Icons.notifications_active, color: scheme.primary),
+          title: Text(context.tr('browser_notifications')),
+          subtitle: Text(context.tr('browser_notifications_on')),
+        );
+      case 'default':
+        return Material(
+          color: scheme.secondaryContainer,
+          child: ListTile(
+            leading: const Icon(Icons.notifications_none),
+            title: Text(context.tr('browser_notifications')),
+            subtitle: Text(context.tr('browser_notifications_ask')),
+            trailing: FilledButton(
+                onPressed: _request, child: Text(context.tr('allow'))),
+          ),
+        );
+      case 'denied':
+        return Material(
+          color: scheme.errorContainer,
+          child: ListTile(
+            leading: const Icon(Icons.notifications_off_outlined),
+            title: Text(context.tr('browser_notifications')),
+            subtitle: Text(context.tr('browser_notifications_blocked')),
+            trailing: TextButton(
+                onPressed: _check, child: Text(context.tr('retry'))),
+          ),
+        );
+      default:
+        return ListTile(
+          leading: const Icon(Icons.notifications_off_outlined),
+          title: Text(context.tr('browser_notifications')),
+          subtitle: Text(context.tr('browser_notifications_unsupported')),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final granted = _permission?.isGranted ?? true;
@@ -68,6 +119,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       body: ValueListenableBuilder<AccountPrivate>(
         valueListenable: Session.settings,
         builder: (context, s, _) => ListView(children: [
+          if (kIsWeb) _webTile(context),
           if (!granted)
             Material(
               color: Theme.of(context).colorScheme.errorContainer,
@@ -106,7 +158,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
           const Divider(),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(context.tr('push_note'),
+            child: Text(context.tr(kIsWeb ? 'web_push_note' : 'push_note'),
                 style: Theme.of(context).textTheme.bodySmall),
           ),
         ]),

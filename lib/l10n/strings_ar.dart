@@ -345,4 +345,11 @@ const Map<String, String> stringsAr = {
   "you_blocked_contact": "لقد حظرت جهة الاتصال هذه.",
   "you_deleted_message": "لقد حذفت هذه الرسالة",
   "your_name": "اسمك",
+  "open": "فتح",
+  "browser_notifications": "إشعارات المتصفح",
+  "browser_notifications_on": "مفعّلة. تظهر الرسائل والمكالمات الجديدة أثناء فتح AduChat أو عمله في الخلفية.",
+  "browser_notifications_ask": "اسمح بالإشعارات لترى الرسائل والمكالمات الجديدة أثناء عمل AduChat في الخلفية.",
+  "browser_notifications_blocked": "حظرها المتصفح. اسمح بالإشعارات لهذا الموقع من إعدادات الموقع في المتصفح، ثم اضغط إعادة المحاولة.",
+  "browser_notifications_unsupported": "لا يستطيع هذا المتصفح عرض الإشعارات. على iPhone أضف AduChat إلى الشاشة الرئيسية أولاً.",
+  "web_push_note": "في تطبيق الويب تصل الإشعارات أثناء فتح AduChat في علامة تبويب أو عمله في الخلفية. عند إغلاق المتصفح أو تطبيق الويب بالكامل لا تصل الإشعارات بعد. يوفّر تطبيق Android إشعارات كاملة.",
 };

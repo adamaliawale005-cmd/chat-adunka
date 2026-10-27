@@ -12,6 +12,7 @@ import '../models/app_user.dart';
 import '../models/chat_models.dart';
 import 'chat_service.dart';
 import 'user_service.dart';
+import 'web_notify.dart';
 
 const _messagesChannel = AndroidNotificationChannel(
   'messages',
@@ -86,6 +87,10 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 ///   local notifications (works on the free plan).
 /// * When the app is closed, notifications need the Cloud Functions in
 ///   /functions (Blaze plan) to send pushes to the saved tokens.
+/// * Web app: while the page runs, new messages and calls appear as browser
+///   notifications when AduChat is in the background (if the person allowed
+///   them) and as an in-app banner when it is on screen. A completely closed
+///   page needs FCM Web Push and the server functions (not set up).
 class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
@@ -105,6 +110,10 @@ class NotificationService {
 
   AuthorizationStatus? permission;
   AccountPrivate prefs = AccountPrivate.defaults;
+
+  /// Label of the "Open" button on in-app banners (set in the user's
+  /// language by the home screen).
+  String openLabel = 'Open';
 
   Future<void> _ensureLocal() async {
     if (_localReady || kIsWeb) return;
@@ -142,7 +151,12 @@ class NotificationService {
     await stop();
     _uid = uid;
     await _ensureLocal();
-    if (kIsWeb) return; // Browser push needs a service worker (not set up).
+    if (kIsWeb) {
+      // Tapped browser notifications open the chat; no push token here
+      // (FCM Web Push is not set up).
+      WebNotify.listen(_open);
+      return;
+    }
     try {
       final messaging = FirebaseMessaging.instance;
       final settings = await messaging.requestPermission();
@@ -169,6 +183,7 @@ class NotificationService {
     _openSub = null;
     _uid = null;
     _known.clear();
+    _primed = false;
   }
 
   /// Removes this phone's token so a signed-out account stops getting pushes.
@@ -226,6 +241,10 @@ class NotificationService {
       required String body,
       String? payload,
       bool call = false}) async {
+    if (kIsWeb) {
+      await _showWeb(title: title, body: body, payload: payload, call: call);
+      return;
+    }
     await _ensureLocal();
     if (!_localReady) return;
     try {
@@ -239,7 +258,44 @@ class NotificationService {
     } catch (_) {}
   }
 
+  /// Web: a system notification when AduChat is in the background (and the
+  /// person allowed it), otherwise an in-app banner with an Open button.
+  Future<void> _showWeb(
+      {required String title,
+      required String body,
+      String? payload,
+      bool call = false}) async {
+    if (!WebNotify.pageVisible) {
+      final shown = await WebNotify.show(
+          title: title,
+          body: body,
+          tag: payload ?? title,
+          payload: payload,
+          urgent: call);
+      if (shown) return;
+    }
+    final messenger = messengerKey.currentState;
+    if (messenger == null) return;
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(SnackBar(
+      content: Semantics(
+        liveRegion: true,
+        child: Text(body.isEmpty ? title : '$title: $body',
+            maxLines: 3, overflow: TextOverflow.ellipsis),
+      ),
+      behavior: SnackBarBehavior.floating,
+      duration: const Duration(seconds: 6),
+      action: payload == null
+          ? null
+          : SnackBarAction(label: openLabel, onPressed: () => _open(payload)),
+    ));
+  }
+
   Future<void> cancelFor(String payload) async {
+    if (kIsWeb) {
+      WebNotify.close(payload);
+      return;
+    }
     if (!_localReady) return;
     try {
       await _local.cancel(payload.hashCode & 0x7fffffff);
@@ -249,25 +305,27 @@ class NotificationService {
   // ---------- in-app message notifications ----------
 
   final Map<String, String> _known = {};
+  bool _primed = false;
 
   /// Compares the chat list with the previous snapshot and notifies about
   /// new messages from other people in chats that are not open.
   Future<void> onChatsChanged(String me, List<Chat> chats,
-      {required String Function(String key) tr}) async {
-    final first = _known.isEmpty;
-    for (final c in chats) {
-      final previous = _known[c.id];
-      final marker = '${c.lastMessageAt?.millisecondsSinceEpoch}';
-      _known[c.id] = marker;
-      if (first ||
-          previous == marker ||
-          previous == null && c.unreadFor(me) == 0) continue;
-      if (c.lastSenderId == me ||
-          c.lastSenderId.isEmpty ||
-          c.lastMessageType == 'system') continue;
-      if (c.unreadFor(me) == 0) continue;
-      if (ChatService.instance.openChats.contains(c.id)) continue;
-      if (c.isGroup ? !prefs.notifyGroups : !prefs.notifyMessages) continue;
+      {required String Function(String key) tr,
+      Set<String> blocked = const {}}) async {
+    final fresh = selectNewMessages(
+      me: me,
+      chats: chats,
+      known: _known,
+      primed: _primed,
+      openChats: ChatService.instance.openChats,
+      blocked: blocked,
+      prefs: prefs,
+    );
+    _primed = true;
+    if (kIsWeb) {
+      WebNotify.setBadge(chats.fold(0, (n, c) => n + c.unreadFor(me)));
+    }
+    for (final c in fresh) {
       final sender = await UserService.instance.getUser(c.lastSenderId);
       final senderName =
           sender.hasProfile ? sender.displayName : tr('deleted_account');
@@ -280,5 +338,41 @@ class NotificationService {
         payload: 'chat:${c.id}',
       );
     }
+  }
+
+  /// Chats in a new snapshot that deserve a notification. Updates [known]
+  /// (chat id -> time of its last message).
+  ///
+  /// No notification for: the first snapshot after start (old messages),
+  /// own messages, system events, read chats, the chat on screen, blocked
+  /// people, or when that kind of notification is turned off.
+  @visibleForTesting
+  static List<Chat> selectNewMessages({
+    required String me,
+    required List<Chat> chats,
+    required Map<String, String> known,
+    required bool primed,
+    required Set<String> openChats,
+    required Set<String> blocked,
+    required AccountPrivate prefs,
+  }) {
+    final result = <Chat>[];
+    for (final c in chats) {
+      final previous = known[c.id];
+      final marker = '${c.lastMessageAt?.millisecondsSinceEpoch}';
+      known[c.id] = marker;
+      if (!primed || previous == marker) continue;
+      if (c.lastSenderId == me ||
+          c.lastSenderId.isEmpty ||
+          c.lastMessageType == 'system') {
+        continue;
+      }
+      if (c.unreadFor(me) == 0) continue;
+      if (openChats.contains(c.id)) continue;
+      if (blocked.contains(c.lastSenderId)) continue;
+      if (c.isGroup ? !prefs.notifyGroups : !prefs.notifyMessages) continue;
+      result.add(c);
+    }
+    return result;
   }
 }
