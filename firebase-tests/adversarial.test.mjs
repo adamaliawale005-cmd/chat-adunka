@@ -62,11 +62,9 @@ after(async () => {
 });
 
 function msg(sender, receiver, extra = {}) {
-  const m = {
-    senderId: sender, type: 'text', text: 'hi', clientCreatedAt: new Date(), createdAt: serverTimestamp(), ...extra,
-  };
+  const m = { senderId: sender, type: 'text', text: 'hi', clientCreatedAt: new Date(), createdAt: serverTimestamp() };
   if (receiver) Object.assign(m, { receiverId: receiver, status: 'sent' });
-  return m;
+  return { ...m, ...extra };
 }
 
 function chatSummary(sender, members, id, extra = {}) {

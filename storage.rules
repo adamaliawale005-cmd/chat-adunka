@@ -59,7 +59,9 @@ service firebase.storage {
 
     match /chats/{chatId}/{senderId}/{fileName} {
       allow read: if isMember(chatId);
-      allow create: if isMember(chatId)
+      // resource == null: an existing file can never be overwritten.
+      allow create: if resource == null
+        && isMember(chatId)
         && me() == senderId
         && fileName.size() <= 200
         && !fileName.lower().matches('.*[.](apk|aab|exe|msi|bat|cmd|com|scr|js|jar|sh|ps1|vbs|dll|html?|svg|xapk)$')

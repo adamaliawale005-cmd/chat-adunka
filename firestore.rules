@@ -246,7 +246,8 @@ service cloud.firestore {
           && userExists(peerOf(chatId))
           && neitherBlocked(me(), peerOf(chatId))
           && incoming().lastSenderId == me()
-          && isStr(incoming().get('lastMessage', ''), 0, 4100))
+          && isStr(incoming().get('lastMessage', ''), 0, 4100)
+          && existsAfter(/databases/$(database)/documents/chats/$(chatId)/messages/$(incoming().lastMessageId)))
         ||
         // group chat
         (isGroupId(chatId)
