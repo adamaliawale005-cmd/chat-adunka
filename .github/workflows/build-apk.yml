@@ -258,7 +258,7 @@ jobs:
             } > android/key.properties
             echo "HAS_RELEASE_KEY=true" >> "$GITHUB_ENV"
           else
-            echo "::warning title=Release signing::Secrets ANDROID_RELEASE_KEYSTORE_BASE64 and ANDROID_RELEASE_STORE_PASSWORD are not set, so only a test (debug) APK is built and updates will not install over it. Run the 'Create signing keys' workflow once."
+            echo "::warning title=Release signing::Secrets ANDROID_RELEASE_KEYSTORE_BASE64 and ANDROID_RELEASE_STORE_PASSWORD are not set, so only a test (debug) APK is built: no release APK and no Google Play App Bundle. Run the 'Create signing keys' workflow once."
           fi
 
       - name: Install dependencies
@@ -269,10 +269,30 @@ jobs:
           flutter build apk --debug --target-platform android-arm,android-arm64 --dart-define-from-file="$RUNNER_TEMP/defines.json" 2>&1 | tee ci-logs/build-debug.log
           exit ${PIPESTATUS[0]}
 
+      - name: Check Google Play target SDK (API 36 or later)
+        run: |
+          AAPT2=$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)aapt2
+          "$AAPT2" dump badging build/app/outputs/flutter-apk/app-debug.apk > ci-logs/badging.txt 2>/dev/null || true
+          target=$(grep -o "targetSdkVersion:'[0-9]*'" ci-logs/badging.txt | grep -o "[0-9]*")
+          min=$(grep -o "sdkVersion:'[0-9]*'" ci-logs/badging.txt | head -1 | grep -o "[0-9]*")
+          echo "::notice title=Android SDK levels::targetSdk=${target:-unknown} minSdk=${min:-unknown}"
+          if [ -n "$target" ] && [ "$target" -lt 36 ]; then
+            echo "::error title=Google Play::targetSdk $target is below 36, which Google Play requires."
+            exit 1
+          fi
+
       - name: Build release APK
         if: env.HAS_RELEASE_KEY == 'true'
         run: |
           flutter build apk --release --target-platform android-arm,android-arm64 --dart-define-from-file="$RUNNER_TEMP/defines.json" 2>&1 | tee ci-logs/build-release.log
+          exit ${PIPESTATUS[0]}
+
+      # Google Play upload format. Only built with the permanent release key;
+      # never signed with a debug or temporary key.
+      - name: Build release App Bundle (Google Play)
+        if: env.HAS_RELEASE_KEY == 'true'
+        run: |
+          flutter build appbundle --release --dart-define-from-file="$RUNNER_TEMP/defines.json" 2>&1 | tee ci-logs/build-aab.log
           exit ${PIPESTATUS[0]}
 
       - name: Signing fingerprints (add these in Firebase)
@@ -301,6 +321,13 @@ jobs:
         with:
           name: AduChat-APK
           path: build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Upload release App Bundle
+        if: env.HAS_RELEASE_KEY == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: AduChat-release-AAB
+          path: build/app/outputs/bundle/release/app-release.aab
 
       - uses: actions/upload-artifact@v4
         if: always()

@@ -18,7 +18,8 @@ if (hasReleaseKey) {
 
 android {
     namespace = "com.aduchat.chat_adunka"
-    compileSdk = flutter.compileSdkVersion
+    // Google Play requires new apps and updates to target Android 16 (API 36).
+    compileSdk = maxOf(flutter.compileSdkVersion, 36)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -32,7 +33,7 @@ android {
         applicationId = "com.aduchat.chat_adunka"
         // Firebase Authentication and WebRTC need Android 6.0 (API 23) or newer.
         minSdk = maxOf(flutter.minSdkVersion, 23)
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = maxOf(flutter.targetSdkVersion, 36)
         // Version name and code come from `version:` in pubspec.yaml.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
