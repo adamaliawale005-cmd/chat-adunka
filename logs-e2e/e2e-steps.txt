@@ -1,0 +1,15 @@
+E2E STEP PASS: app opens and connects to Firebase
+E2E STEP PASS: second user registered and created a profile
+E2E STEP PASS: new account registered (email)
+E2E STEP PASS: profile saved; username reserved; visible to other users
+E2E STEP PASS: user search by username
+E2E STEP PASS: message sent by A is received by B
+E2E STEP PASS: reply from B is received by A in real time
+E2E STEP PASS: read receipts reach the sender
+E2E STEP PASS: a third user cannot read the private chat
+E2E STEP PASS: photo sent by A is downloaded intact by B
+E2E STEP PASS: voice message sent by A is downloaded intact by B
+E2E STEP PASS: group created in the UI; members exchange messages
+E2E STEP PASS: a non-member cannot read the group
+E2E STEP PASS: voice call rings on the other side (WebRTC offer delivered)
+E2E STEP PASS: declined call ends on the caller; call history recorded

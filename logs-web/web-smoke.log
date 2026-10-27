@@ -1,0 +1,17 @@
+127.0.0.1 - - [27/Oct/2026 15:17:35] "GET /chat-adunka/ HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:17:35] "GET /chat-adunka/icons/Icon-192.png HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:17:35] "GET /chat-adunka/notify.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:17:35] "GET /chat-adunka/flutter_bootstrap.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:17:35] "GET /chat-adunka/notify/sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:17:35] "GET /chat-adunka/main.dart.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:17:35] "GET /chat-adunka/assets/FontManifest.json HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:17:35] "GET /chat-adunka/assets/fonts/MaterialIcons-Regular.otf HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:17:35] "GET /chat-adunka/assets/packages/cupertino_icons/assets/CupertinoIcons.ttf HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:17:36] "GET /chat-adunka/assets/AssetManifest.bin.json HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:17:36] "GET /chat-adunka/assets/assets/branding/logo.png HTTP/1.1" 200 -
+HTTP 200 http://127.0.0.1:60831/chat-adunka/
+PASS first frame drawn
+Console: [log] AduChat: Firebase project aduchat-c4ee6 (build-settings)
+Screen words found: ['AduChat', 'Create account']
+RESULT PASS
+::notice title=Web smoke (web-local)::PASS http://127.0.0.1:60831/chat-adunka/ words=['AduChat', 'Create account']

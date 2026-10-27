@@ -1,0 +1,4 @@
+::warning title=Official project::Could not read the public web config (aduchat-c4ee6.web.app: HTTPError 404).
+::notice title=Firebase API key::Verified online: the API key belongs to 'aduchat-c4ee6'.
+::notice title=Firebase configured::Project aduchat-c4ee6; Android app id and sender id belong to the same project.
+::notice title=Features::Storage enabled: false; email sign-in: true; phone sign-in: true; TURN relay: not configured (STUN only)

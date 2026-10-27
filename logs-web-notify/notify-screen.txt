@@ -1,0 +1,4 @@
+AduChat
+CI web check CI Test B: Hello from B (background) 15:19 2
+New chat | 1
+Chats | Contacts | Calls | Settings

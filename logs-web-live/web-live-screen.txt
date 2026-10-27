@@ -1,0 +1,8 @@
+AduChat
+Language
+Welcome to AduChat
+Connect with people around the world
+Create account
+Log in
+By continuing you agree to use AduChat respectfully. Abusive accounts can be reported and blocked.
+Firebase: aduchat-c4ee6 

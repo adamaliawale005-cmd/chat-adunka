@@ -1,0 +1,6 @@
+HTTP 200 https://adamaliawale005-cmd.github.io/chat-adunka/
+PASS first frame drawn
+Console: [log] AduChat: Firebase project aduchat-c4ee6 (build-settings)
+Screen words found: ['AduChat', 'Create account']
+RESULT PASS
+::notice title=Web smoke (web-live)::PASS https://adamaliawale005-cmd.github.io/chat-adunka/ words=['AduChat', 'Create account']

@@ -1,0 +1,16 @@
+PASS  Email registration on the live project
+PASS  Second and third accounts registered
+PASS  Published security rules are current
+PASS  Profile created (CI Test A)
+PASS  Profile created (CI Test B)
+PASS  B can see A's public profile
+PASS  Outsider cannot read A's private data
+PASS  A creates a chat with B
+PASS  Message sent by A
+PASS  Message sent by B
+PASS  B receives the other's message
+PASS  A receives the other's message
+PASS  Outsider cannot read the conversation
+PASS  Outsider cannot read the chat
+PASS  Test data and test accounts deleted
+::notice title=Production backend check::15/15 passed

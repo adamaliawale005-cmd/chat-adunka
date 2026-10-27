@@ -1,0 +1,34 @@
+[warning] [GroupMarkerNotSet(crbug.com/242999)!:A070200074160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+[debug] Injecting <script> tag. Using callback.
+[warning] [GroupMarkerNotSet(crbug.com/242999)!:A070200074160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+[warning] [GroupMarkerNotSet(crbug.com/242999)!:A0A0200074160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+[debug] TrustedTypes available. Creating policy: flutterfire-firebase_core
+[debug] Initializing Firebase firebase_core
+[debug] TrustedTypes available. Creating policy: flutterfire-firebase_firestore
+[debug] Initializing Firebase firebase_firestore
+[debug] TrustedTypes available. Creating policy: flutterfire-firebase_auth
+[debug] Initializing Firebase firebase_auth
+[debug] TrustedTypes available. Creating policy: flutterfire-firebase_messaging
+[debug] Initializing Firebase firebase_messaging
+[debug] TrustedTypes available. Creating policy: flutterfire-firebase_storage
+[debug] Initializing Firebase firebase_storage
+[log] AduChat: Firebase project aduchat-c4ee6 (build-settings)
+[warning] [GroupMarkerNotSet(crbug.com/242999)!:A0D0200074160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+[verbose] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o
+[debug] AduChat notify: shown by service worker
+[warning] [GroupMarkerNotSet(crbug.com/242999)!:A0702B0874160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+[debug] Injecting <script> tag. Using callback.
+[warning] [GroupMarkerNotSet(crbug.com/242999)!:A0702B0874160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+[warning] [GroupMarkerNotSet(crbug.com/242999)!:A0A02B0874160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.
+[debug] TrustedTypes available. Creating policy: flutterfire-firebase_core
+[debug] Initializing Firebase firebase_core
+[debug] TrustedTypes available. Creating policy: flutterfire-firebase_firestore
+[debug] Initializing Firebase firebase_firestore
+[debug] TrustedTypes available. Creating policy: flutterfire-firebase_auth
+[debug] Initializing Firebase firebase_auth
+[debug] TrustedTypes available. Creating policy: flutterfire-firebase_messaging
+[debug] Initializing Firebase firebase_messaging
+[debug] TrustedTypes available. Creating policy: flutterfire-firebase_storage
+[debug] Initializing Firebase firebase_storage
+[log] AduChat: Firebase project aduchat-c4ee6 (build-settings)
+[warning] [GroupMarkerNotSet(crbug.com/242999)!:A0D02B0874160000]Automatic fallback to software WebGL has been deprecated. Please use the --enable-unsafe-swiftshader flag to opt in to lower security guarantees for trusted content.

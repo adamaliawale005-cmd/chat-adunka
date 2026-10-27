@@ -1,0 +1,37 @@
+127.0.0.1 - - [27/Oct/2026 15:18:41] "GET /chat-adunka/ HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:18:43] "GET /chat-adunka/icons/Icon-192.png HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:18:43] "GET /chat-adunka/notify.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:18:43] "GET /chat-adunka/flutter_bootstrap.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:18:43] "GET /chat-adunka/notify/sw.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:18:43] "GET /chat-adunka/main.dart.js HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:18:43] "GET /chat-adunka/assets/FontManifest.json HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:18:43] "GET /chat-adunka/assets/fonts/MaterialIcons-Regular.otf HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:18:43] "GET /chat-adunka/assets/packages/cupertino_icons/assets/CupertinoIcons.ttf HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:18:43] "GET /chat-adunka/favicon.png HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:18:44] "GET /chat-adunka/assets/AssetManifest.bin.json HTTP/1.1" 200 -
+PASS  notification script loaded
+127.0.0.1 - - [27/Oct/2026 15:18:44] "GET /chat-adunka/assets/assets/branding/logo.png HTTP/1.1" 200 -
+PASS  notification service worker registered
+127.0.0.1 - - [27/Oct/2026 15:18:52] "GET /chat-adunka/assets/assets/branding/logo_foreground.png HTTP/1.1" 200 -
+PASS  A signs in on the web app
+PASS  banner appears for a new message while on Settings
+PASS  tab title shows unread count
+PASS  Open on the banner opens the chat
+Before background test: url= http://127.0.0.1:60023/chat-adunka/ permission= granted
+127.0.0.1 - - [27/Oct/2026 15:19:09] "GET /chat-adunka/icons/Icon-192.png HTTP/1.1" 304 -
+127.0.0.1 - - [27/Oct/2026 15:19:09] "GET /chat-adunka/icons/Icon-maskable-192.png HTTP/1.1" 200 -
+PASS  system notification while the page is in the background
+127.0.0.1 - - [27/Oct/2026 15:19:09] "GET /chat-adunka/?open=chat:ciweb912b9f4fe1aa HTTP/1.1" 200 -
+127.0.0.1 - - [27/Oct/2026 15:19:09] "GET /chat-adunka/notify.js HTTP/1.1" 304 -
+127.0.0.1 - - [27/Oct/2026 15:19:09] "GET /chat-adunka/flutter_bootstrap.js HTTP/1.1" 304 -
+127.0.0.1 - - [27/Oct/2026 15:19:09] "GET /chat-adunka/main.dart.js HTTP/1.1" 304 -
+127.0.0.1 - - [27/Oct/2026 15:19:09] "GET /chat-adunka/favicon.png HTTP/1.1" 304 -
+127.0.0.1 - - [27/Oct/2026 15:19:09] "GET /chat-adunka/assets/FontManifest.json HTTP/1.1" 304 -
+127.0.0.1 - - [27/Oct/2026 15:19:09] "GET /chat-adunka/assets/fonts/MaterialIcons-Regular.otf HTTP/1.1" 304 -
+127.0.0.1 - - [27/Oct/2026 15:19:09] "GET /chat-adunka/assets/packages/cupertino_icons/assets/CupertinoIcons.ttf HTTP/1.1" 304 -
+127.0.0.1 - - [27/Oct/2026 15:19:10] "GET /chat-adunka/assets/AssetManifest.bin.json HTTP/1.1" 304 -
+127.0.0.1 - - [27/Oct/2026 15:19:10] "GET /chat-adunka/assets/assets/branding/logo_foreground.png HTTP/1.1" 304 -
+Notifications: ['CI web check | CI Test B: Hello from B (background) | chat:ciweb912b9f4fe1aa']
+PASS  notification link opens the chat after reload
+PASS  test data and accounts deleted
+::notice title=Web notification check::9/9 passed
