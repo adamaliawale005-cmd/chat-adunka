@@ -351,9 +351,14 @@ const Map<String, String> stringsSo = {
   "your_name": "Magacaaga",
   "open": "Fur",
   "browser_notifications": "Ogeysiisyada browser-ka",
-  "browser_notifications_on": "Waa shidan yihiin. Fariimaha cusub iyo wicitaannadu way soo muuqdaan inta AduChat furan tahay ama gadaal ka socoto.",
-  "browser_notifications_ask": "Oggolow ogeysiisyada si aad u aragto fariimaha cusub iyo wicitaannada inta AduChat gadaal ka socoto.",
-  "browser_notifications_blocked": "Browser-ka ayaa xannibay. Ka oggolow ogeysiisyada boggan dejinta browser-ka, kadibna taabo Isku day mar kale.",
-  "browser_notifications_unsupported": "Browser-kan ma soo bandhigi karo ogeysiisyo. iPhone-ka, marka hore AduChat ku dar Home Screen-ka.",
-  "web_push_note": "Nooca web-ka, ogeysiisyadu waxay yimaadaan inta AduChat ku furan tahay tab ama gadaal ka socoto. Marka browser-ka ama web app-ku gebi ahaanba xiran yahay, ogeysiisyo weli lama soo diro. App-ka Android-ka wuxuu leeyahay ogeysiisyo dhammaystiran.",
+  "browser_notifications_on":
+      "Waa shidan yihiin. Fariimaha cusub iyo wicitaannadu way soo muuqdaan inta AduChat furan tahay ama gadaal ka socoto.",
+  "browser_notifications_ask":
+      "Oggolow ogeysiisyada si aad u aragto fariimaha cusub iyo wicitaannada inta AduChat gadaal ka socoto.",
+  "browser_notifications_blocked":
+      "Browser-ka ayaa xannibay. Ka oggolow ogeysiisyada boggan dejinta browser-ka, kadibna taabo Isku day mar kale.",
+  "browser_notifications_unsupported":
+      "Browser-kan ma soo bandhigi karo ogeysiisyo. iPhone-ka, marka hore AduChat ku dar Home Screen-ka.",
+  "web_push_note":
+      "Nooca web-ka, ogeysiisyadu waxay yimaadaan inta AduChat ku furan tahay tab ama gadaal ka socoto. Marka browser-ka ama web app-ku gebi ahaanba xiran yahay, ogeysiisyo weli lama soo diro. App-ka Android-ka wuxuu leeyahay ogeysiisyo dhammaystiran.",
 };

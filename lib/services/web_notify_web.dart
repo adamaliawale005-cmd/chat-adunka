@@ -64,7 +64,6 @@ class WebNotify {
   static void setBadge(int count) => _call<JSAny?>('setBadge', count.toJS);
 
   static void listen(void Function(String payload) onOpen) {
-    _call<JSAny?>(
-        'listen', ((JSString p) => onOpen(p.toDart)).toJS);
+    _call<JSAny?>('listen', ((JSString p) => onOpen(p.toDart)).toJS);
   }
 }

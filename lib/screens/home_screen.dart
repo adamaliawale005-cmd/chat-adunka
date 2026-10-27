@@ -129,7 +129,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _updateTitle(List<Chat> chats) {
     if (!kIsWeb) return;
     final n = chats.where((c) => c.unreadFor(_uid) > 0).length;
-    SystemChrome.setApplicationSwitcherDescription(ApplicationSwitcherDescription(
+    SystemChrome.setApplicationSwitcherDescription(
+        ApplicationSwitcherDescription(
       label: n > 0 ? '($n) AduChat' : 'AduChat',
       primaryColor: Theme.of(context).colorScheme.primary.toARGB32(),
     ));
@@ -304,7 +305,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 }
-
 
 /// Web only: asks once whether AduChat may show browser notifications.
 /// Browsers only allow the question after a tap, so this is a banner with a

@@ -349,9 +349,14 @@ const Map<String, String> stringsEn = {
   "your_name": "Your name",
   "open": "Open",
   "browser_notifications": "Browser notifications",
-  "browser_notifications_on": "On. New messages and calls appear while AduChat is open or in the background.",
-  "browser_notifications_ask": "Allow notifications so you see new messages and calls while AduChat is in the background.",
-  "browser_notifications_blocked": "Blocked by the browser. Allow notifications for this site in the browser’s site settings, then tap Retry.",
-  "browser_notifications_unsupported": "This browser cannot show notifications. On iPhone, add AduChat to the Home Screen first.",
-  "web_push_note": "In the web app, notifications arrive while AduChat is open in a tab or running in the background. When the browser or web app is completely closed, notifications are not delivered yet. The Android app has full notifications.",
+  "browser_notifications_on":
+      "On. New messages and calls appear while AduChat is open or in the background.",
+  "browser_notifications_ask":
+      "Allow notifications so you see new messages and calls while AduChat is in the background.",
+  "browser_notifications_blocked":
+      "Blocked by the browser. Allow notifications for this site in the browser’s site settings, then tap Retry.",
+  "browser_notifications_unsupported":
+      "This browser cannot show notifications. On iPhone, add AduChat to the Home Screen first.",
+  "web_push_note":
+      "In the web app, notifications arrive while AduChat is open in a tab or running in the background. When the browser or web app is completely closed, notifications are not delivered yet. The Android app has full notifications.",
 };

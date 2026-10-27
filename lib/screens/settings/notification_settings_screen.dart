@@ -98,8 +98,8 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
             leading: const Icon(Icons.notifications_off_outlined),
             title: Text(context.tr('browser_notifications')),
             subtitle: Text(context.tr('browser_notifications_blocked')),
-            trailing: TextButton(
-                onPressed: _check, child: Text(context.tr('retry'))),
+            trailing:
+                TextButton(onPressed: _check, child: Text(context.tr('retry'))),
           ),
         );
       default:

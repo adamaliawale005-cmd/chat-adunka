@@ -60,8 +60,8 @@ void main() {
 
   test('a new message from someone else is announced once', () {
     pick([direct()], primed: false);
-    expect(pick([direct(minute: 1, unread: 2)]).map((c) => c.id),
-        ['friend_me']);
+    expect(
+        pick([direct(minute: 1, unread: 2)]).map((c) => c.id), ['friend_me']);
     // Same snapshot again (e.g. typing indicator update): no repeat.
     expect(pick([direct(minute: 1, unread: 2)]), isEmpty);
   });
@@ -92,10 +92,14 @@ void main() {
   test('settings turn message and group alerts off separately', () {
     pick([direct(), group()], primed: false);
     const noGroups = AccountPrivate(notifyGroups: false);
-    expect(pick([direct(minute: 1), group(minute: 1)], prefs: noGroups)
-        .map((c) => c.id), ['friend_me']);
+    expect(
+        pick([direct(minute: 1), group(minute: 1)], prefs: noGroups)
+            .map((c) => c.id),
+        ['friend_me']);
     const noDirect = AccountPrivate(notifyMessages: false);
-    expect(pick([direct(minute: 2), group(minute: 2)], prefs: noDirect)
-        .map((c) => c.id), ['group1']);
+    expect(
+        pick([direct(minute: 2), group(minute: 2)], prefs: noDirect)
+            .map((c) => c.id),
+        ['group1']);
   });
 }
