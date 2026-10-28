@@ -42,7 +42,7 @@ or account.
 | Signed `.aab`, Play App Signing fingerprints in Firebase | **BLOCKED** | After Part A and first Play upload |
 | Firestore rules: membership, existence, blocking, admin-only posting, system messages, privacy, calls, reports | **PASS (CI emulator)** | `firestore.rules`; `firebase-tests/adversarial.test.mjs`, `firestore.test.mjs` — see "CI results" |
 | Storage rules: types, sizes, blocked uploads | **PASS (CI emulator)** | `storage.rules`; `firebase-tests/storage.test.mjs` |
-| New rules published to aduchat-c4ee6 | **BLOCKED** | Owner: `firebase deploy --only firestore:rules,storage` before merging |
+| New rules published to aduchat-c4ee6 | **BLOCKED** (awaiting owner approval) | Backup, publish, verify and rollback steps: `docs/RULES_DEPLOYMENT.md`. Firestore only; Storage is not enabled yet |
 | End-to-end encryption | **FAIL (by design today)** | `docs/SECURITY.md` states it honestly. Needs a reviewed libsignal integration with multi-device keys and recovery; separate release gate if WhatsApp-grade privacy is required |
 | App Check (Play Integrity / App Attest / reCAPTCHA Enterprise) | **FAIL** | Not integrated. Plan: metrics-only, then enforce |
 | Server-side rate limits (sign-up, lookups, messages, media, calls, reports) | **FAIL** | Only rules-level size limits and the TURN function limit exist |

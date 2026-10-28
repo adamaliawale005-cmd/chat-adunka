@@ -366,6 +366,28 @@ describe('calls: signaling integrity', () => {
     }));
   });
 
+  test('the caller cannot rewrite the callee\'s call history after the call started', async () => {
+    const d = db('alice');
+    const batch = writeBatch(d);
+    batch.set(doc(d, 'calls', 'c9'), call());
+    batch.set(doc(d, 'users', 'bob', 'calls', 'c9'), {
+      callId: 'c9', peerId: 'alice', type: 'audio', direction: 'incoming', status: 'missed', seen: false, createdAt: serverTimestamp(),
+    });
+    await assertSucceeds(batch.commit());
+    await assertFails(updateDoc(doc(db('alice'), 'users', 'bob', 'calls', 'c9'), { status: 'answered', seen: true }));
+    await assertFails(setDoc(doc(db('alice'), 'users', 'bob', 'calls', 'c9b'), {
+      callId: 'c9b', peerId: 'alice', type: 'audio', direction: 'incoming', status: 'missed', createdAt: serverTimestamp(),
+    }));
+    // a fake entry pretending to come from someone else
+    const d2 = db('alice');
+    const b2 = writeBatch(d2);
+    b2.set(doc(d2, 'calls', 'c10'), call());
+    b2.set(doc(d2, 'users', 'bob', 'calls', 'c10'), {
+      callId: 'c10', peerId: 'carol', type: 'audio', direction: 'incoming', status: 'answered', createdAt: serverTimestamp(),
+    });
+    await assertFails(b2.commit());
+  });
+
   test('call records cannot be deleted', async () => {
     await setDoc(doc(db('alice'), 'calls', 'c1'), call());
     await assertFails(deleteDoc(doc(db('alice'), 'calls', 'c1')));
