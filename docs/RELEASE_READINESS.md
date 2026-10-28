@@ -148,3 +148,13 @@ or account.
 | Android APK build, targetSdk 36 | success |
 | Web build + browser smoke test | success |
 | Live backend check, web notifications, deploy | skipped on pull requests (run on `main` after merge) |
+
+## CI results after the compatibility review (commit 51d503e, run 40628172115)
+
+| Job | Result |
+| --- | --- |
+| Credentials scan, format, analyze, unit/widget tests | success |
+| Firestore + Storage rules tests | success — **135/135** (adversarial + app-compatibility suites) |
+| End-to-end on Android emulator (installed-app code; only the rules-version constant differs from `main`) | success — 15/15 steps |
+| Android APK build (targetSdk 36), web build + browser smoke test | success |
+| Live backend check, web notifications | not run on pull requests; run after the rules are published (`docs/RULES_DEPLOYMENT.md`, Step 3) |
