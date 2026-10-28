@@ -32,21 +32,43 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/users/$(owner)/blocked/$(other));
     }
 
-    // Direct chat ids are the two user ids sorted and joined with "_".
-    // Firebase user ids never contain "_", group chat ids never contain "_".
-    function isDirectId(chatId) { return chatId.split('_').size() == 2; }
-    function inDirect(chatId) { return isDirectId(chatId) && me() in chatId.split('_'); }
-    function chat(chatId) { return get(/databases/$(database)/documents/chats/$(chatId)).data; }
-    function chatAfter(chatId) { return getAfter(/databases/$(database)/documents/chats/$(chatId)).data; }
-    function isMember(chatId) {
-      return signedIn() && (inDirect(chatId) || (!isDirectId(chatId) && me() in chat(chatId).members));
+    // Direct chat ids are exactly two non-empty user ids, sorted, joined
+    // with "_". Group chat ids never contain "_". Any other id is refused.
+    function isDirectId(chatId) {
+      let p = chatId.split('_');
+      return p.size() == 2 && p[0].size() > 0 && p[1].size() > 0 && p[0] < p[1];
     }
+    function isGroupId(chatId) { return !chatId.matches('.*_.*'); }
+    function inDirect(chatId) { return isDirectId(chatId) && me() in chatId.split('_'); }
+    function peerOf(chatId) {
+      let p = chatId.split('_');
+      return p[0] == me() ? p[1] : p[0];
+    }
+    function chatPath(chatId) { return /databases/$(database)/documents/chats/$(chatId); }
+    function chat(chatId) { return get(chatPath(chatId)).data; }
+    function chatAfter(chatId) { return getAfter(chatPath(chatId)).data; }
+    function isMember(chatId) {
+      return signedIn() && (inDirect(chatId) || (isGroupId(chatId) && me() in chat(chatId).members));
+    }
+    // Membership as it will be after the current write/batch. For direct
+    // chats the chat document must actually exist (no messages into
+    // conversations that were never created).
     function isMemberAfter(chatId) {
-      return signedIn() && (inDirect(chatId) || (!isDirectId(chatId) && me() in chatAfter(chatId).members));
+      return signedIn() && (
+        (inDirect(chatId) && existsAfter(chatPath(chatId)) && chatAfter(chatId).type == 'direct')
+        || (isGroupId(chatId) && me() in chatAfter(chatId).members));
     }
     function isGroupAdmin(chatId) {
-      return signedIn() && !isDirectId(chatId) && me() in chat(chatId).admins;
+      return signedIn() && isGroupId(chatId) && me() in chat(chatId).admins;
     }
+    // Admin before or after this write (covers creating a group and an
+    // admin stepping down in the same batch as the system message).
+    function wasOrIsGroupAdmin(chatId) {
+      return (exists(chatPath(chatId)) && me() in chat(chatId).get('admins', []))
+        || me() in chatAfter(chatId).get('admins', []);
+    }
+    function neitherBlocked(a, b) { return !hasBlocked(a, b) && !hasBlocked(b, a); }
+    function userExists(uid) { return exists(/databases/$(database)/documents/users/$(uid)); }
 
     // ---------- users ----------
     function validUser(userId) {
@@ -90,26 +112,44 @@ service cloud.firestore {
 
       // Call history. The caller also writes the callee's entry so that
       // missed calls appear even if the callee's app was closed.
+      // Only when the call is started (same batch as calls/{callId}), and
+      // never changed by the caller afterwards.
       match /calls/{callId} {
-        function callAfter() { return getAfter(/databases/$(database)/documents/calls/$(callId)).data; }
+        function callPath() { return /databases/$(database)/documents/calls/$(callId); }
+        function callAfter() { return getAfter(callPath()).data; }
+        function validEntry() {
+          return incoming().keys().hasOnly(['callId', 'peerId', 'type', 'direction', 'status',
+                                            'createdAt', 'answeredAt', 'endedAt', 'durationSec', 'seen'])
+            && incoming().callId == callId;
+        }
         allow read, delete: if signedIn() && me() == userId;
-        allow create, update: if signedIn()
-          && (me() == userId || (callAfter().callerId == me() && userId in callAfter().members))
-          && incoming().keys().hasOnly(['callId', 'peerId', 'type', 'direction', 'status',
-                                        'createdAt', 'answeredAt', 'endedAt', 'durationSec', 'seen'])
-          && incoming().callId == callId;
+        allow update: if signedIn() && me() == userId && validEntry();
+        allow create: if signedIn() && validEntry() && (
+          me() == userId
+          || (!exists(callPath()) && existsAfter(callPath())
+              && callAfter().callerId == me() && callAfter().calleeId == userId
+              && incoming().peerId == me()
+              && incoming().direction == 'incoming'
+              && incoming().status == 'missed'));
       }
     }
 
     // ---------- usernames, phone index, directory ----------
+    // A username can only be claimed in the same write that puts it into
+    // the claimant's profile, so one account cannot reserve many names.
+    function profileUsesUsername(username) {
+      return getAfter(/databases/$(database)/documents/users/$(me())).data.get('username', '') == username;
+    }
     match /usernames/{username} {
       allow get: if signedIn();
       allow list: if false;
       allow create: if signedIn() && username.matches('^[a-z][a-z0-9_]{2,19}$')
-        && incoming().keys().hasOnly(['uid', 'createdAt']) && incoming().uid == me();
+        && incoming().keys().hasOnly(['uid', 'createdAt']) && incoming().uid == me()
+        && profileUsesUsername(username);
       // Re-claiming your own username (e.g. after a failed save) is allowed.
       allow update: if signedIn() && existing().uid == me()
-        && incoming().keys().hasOnly(['uid', 'createdAt']) && incoming().uid == me();
+        && incoming().keys().hasOnly(['uid', 'createdAt']) && incoming().uid == me()
+        && profileUsesUsername(username);
       allow delete: if signedIn() && existing().uid == me();
     }
 
@@ -124,7 +164,9 @@ service cloud.firestore {
     }
 
     match /directory/{userId} {
-      allow read: if signedIn();
+      allow get: if signedIn();
+      // Search pages are limited, so the directory cannot be dumped in one query.
+      allow list: if signedIn() && request.query.limit != null && request.query.limit <= 50;
       allow create, update: if signedIn() && me() == userId
         && incoming().keys().hasOnly(['uid', 'displayName', 'displayNameLower', 'username',
                                       'usernameLower', 'updatedAt'])
@@ -140,7 +182,9 @@ service cloud.firestore {
     // exist). If the read is refused, the rules published in the Firebase
     // console are older than the app expects. Nothing is stored here.
     match /rulesVersion/{version} {
-      allow get: if signedIn() && version == '2026-10-25';
+      // 2026-10-25 is still answered so apps installed before these rules
+      // do not show a false "rules outdated" message.
+      allow get: if signedIn() && version in ['2026-10-25', '2026-10-27'];
       allow list, write: if false;
     }
 
@@ -150,9 +194,13 @@ service cloud.firestore {
         && incoming().keys().hasOnly(['reporterId', 'reportedUid', 'reason', 'details',
                                       'chatId', 'messageId', 'createdAt'])
         && incoming().reporterId == me()
+        && isStr(incoming().reportedUid, 1, 128)
         && incoming().reportedUid != me()
-        && isStr(incoming().reason, 1, 50)
-        && isStr(incoming().get('details', ''), 0, 1000);
+        && incoming().reason in ['spam', 'harassment', 'inappropriate', 'impersonation', 'violence', 'scam', 'other']
+        && isStr(incoming().get('details', ''), 0, 1000)
+        && isStr(incoming().get('chatId', 'x'), 1, 200)
+        && isStr(incoming().get('messageId', 'x'), 1, 200)
+        && incoming().createdAt == request.time;
       allow read, update, delete: if false;
     }
 
@@ -161,12 +209,41 @@ service cloud.firestore {
       return ['lastMessage', 'lastMessageType', 'lastSenderId', 'lastMessageAt', 'lastMessageId',
               'updatedAt', 'typing', 'unread'];
     }
-    function validSummary() {
-      return !('lastMessage' in changed()) || incoming().lastSenderId == me();
+    function groupKeys() {
+      return summaryKeys().concat(['type', 'name', 'description', 'photoBase64', 'createdBy',
+              'members', 'admins', 'onlyAdminsCanSend', 'onlyAdminsEditInfo', 'createdAt']);
+    }
+    // A new last-message summary must come from the writer and belong to a
+    // message that exists after this batch (it cannot be forged on its own).
+    function validSummary(chatId) {
+      return !('lastMessage' in changed())
+        || (incoming().lastSenderId == me()
+            && isStr(incoming().lastMessage, 0, 4100)
+            && existsAfter(/databases/$(database)/documents/chats/$(chatId)/messages/$(incoming().lastMessageId)));
     }
     function onlyOwnTyping() {
       return !('typing' in changed())
         || incoming().typing.diff(existing().get('typing', {})).affectedKeys().hasOnly([me()]);
+    }
+    // Resetting only your own unread counter to 0 (allowed even after a block).
+    function onlyOwnUnreadReset() {
+      return changed().hasOnly(['unread'])
+        && incoming().unread.diff(existing().get('unread', {})).affectedKeys().hasOnly([me()])
+        && incoming().unread[me()] == 0;
+    }
+    // Field checks shared by group creation and admin updates. On update only
+    // the fields that change are checked, so groups created by older app
+    // versions (with fields not listed here) stay editable.
+    function validGroupFields(d, keys) {
+      return keys.hasOnly(groupKeys())
+        && isStr(d.name, 1, 60)
+        && (!('description' in keys) || isStr(d.description, 0, 500))
+        && (!('photoBase64' in keys) || !('photoBase64' in d) || isStr(d.photoBase64, 1, 200000))
+        && d.members is list && d.admins is list
+        && d.members.size() >= 1 && d.members.size() <= 256
+        && d.members.hasAll(d.admins)
+        && (!('onlyAdminsCanSend' in keys) || d.onlyAdminsCanSend is bool)
+        && (!('onlyAdminsEditInfo' in keys) || d.onlyAdminsEditInfo is bool);
     }
 
     match /chats/{chatId} {
@@ -174,24 +251,27 @@ service cloud.firestore {
       allow list: if signedIn() && me() in resource.data.members;
 
       allow create: if signedIn() && (
-        // direct chat
-        (isDirectId(chatId) && inDirect(chatId)
+        // direct chat: created by its first message (same batch), only with
+        // an existing user who has not blocked the sender (and vice versa)
+        (inDirect(chatId)
+          && incoming().keys().hasOnly(summaryKeys().concat(['type', 'members']))
           && incoming().type == 'direct'
           && incoming().members.size() == 2
           && incoming().members.hasAll(chatId.split('_'))
-          && incoming().lastSenderId == me())
+          && userExists(peerOf(chatId))
+          && neitherBlocked(me(), peerOf(chatId))
+          && incoming().lastSenderId == me()
+          && isStr(incoming().get('lastMessage', ''), 0, 4100)
+          && existsAfter(/databases/$(database)/documents/chats/$(chatId)/messages/$(incoming().lastMessageId)))
         ||
         // group chat
-        (!isDirectId(chatId)
+        (isGroupId(chatId)
           && incoming().type == 'group'
           && incoming().createdBy == me()
           && me() in incoming().members
           && me() in incoming().admins
-          && incoming().members.hasAll(incoming().admins)
           && incoming().members.size() >= 2
-          && incoming().members.size() <= 256
-          && isStr(incoming().name, 1, 60)
-          && isStr(incoming().get('photoBase64', 'x'), 1, 200000)));
+          && validGroupFields(incoming(), incoming().keys())));
 
       allow update: if signedIn()
         && me() in existing().members
@@ -199,15 +279,21 @@ service cloud.firestore {
         && incoming().get('createdBy', '') == existing().get('createdBy', '')
         && onlyOwnTyping()
         && (
-          // anyone in the chat: last-message summary, typing, unread counters
-          (changed().hasOnly(summaryKeys()) && validSummary())
+          // direct chats: summary, typing, unread - but nothing at all
+          // while either person has blocked the other (except clearing
+          // your own unread counter)
+          (existing().type == 'direct'
+            && changed().hasOnly(summaryKeys())
+            && (onlyOwnUnreadReset()
+                || (neitherBlocked(me(), peerOf(chatId)) && validSummary(chatId))))
           ||
-          // group admins: anything (members, admins, name, photo, settings)
+          // group members: last-message summary, typing, unread counters
+          (existing().type == 'group' && changed().hasOnly(summaryKeys()) && validSummary(chatId))
+          ||
+          // group admins: members, admins, name, photo, settings
           (existing().type == 'group' && me() in existing().admins
-            && validSummary()
-            && incoming().members.size() <= 256
-            && incoming().members.hasAll(incoming().admins)
-            && isStr(incoming().name, 1, 60))
+            && validSummary(chatId)
+            && validGroupFields(incoming(), changed()))
           ||
           // group member leaving
           (existing().type == 'group'
@@ -218,12 +304,29 @@ service cloud.firestore {
           // group member editing info, when the group allows it
           (existing().type == 'group' && !existing().get('onlyAdminsEditInfo', false)
             && changed().hasOnly(['name', 'photoBase64', 'description', 'updatedAt'])
-            && isStr(incoming().name, 1, 60))
+            && isStr(incoming().name, 1, 60)
+            && isStr(incoming().get('description', ''), 0, 500)
+            && isStr(incoming().get('photoBase64', 'x'), 1, 200000))
         );
 
       allow delete: if signedIn() && existing().type == 'group' && me() in existing().admins;
 
       // ---------- messages ----------
+      // System messages are machine-readable group events. Events that
+      // describe an admin action can only be written by an admin; any
+      // member may announce that they left, and rename notices follow the
+      // group's "who can edit info" setting.
+      function systemEvent() { return incoming().text.split(':')[0]; }
+      function validSystemMessage() {
+        let ev = systemEvent();
+        return isGroupId(chatId)
+          && isStr(incoming().text, 1, 3000)
+          && ev in ['created', 'added', 'removed', 'admin_added', 'admin_removed', 'renamed', 'left']
+          && (ev == 'left'
+              || wasOrIsGroupAdmin(chatId)
+              || (ev == 'renamed' && !chatAfter(chatId).get('onlyAdminsEditInfo', false)));
+      }
+
       match /messages/{messageId} {
         allow read: if isMember(chatId);
 
@@ -236,19 +339,29 @@ service cloud.firestore {
           && isStr(incoming().get('text', ''), 0, 4000)
           && (incoming().type != 'text' || incoming().text.size() > 0)
           && incoming().createdAt == request.time
+          // client time may be in the past (offline queue) but not far in
+          // the future (which would pin a message to the top)
+          && incoming().clientCreatedAt is timestamp
+          && incoming().clientCreatedAt < request.time + duration.value(1, 'h')
+          && (!('attachment' in incoming()) || (incoming().attachment is map && incoming().attachment.size() <= 20))
+          && (!('replyTo' in incoming()) || (incoming().replyTo is map && incoming().replyTo.size() <= 10))
+          && (!('forwarded' in incoming()) || incoming().forwarded is bool)
+          && (incoming().type != 'system' || validSystemMessage())
           && (
             (isDirectId(chatId)
-              && incoming().receiverId in chatId.split('_')
-              && incoming().receiverId != me()
+              && incoming().type != 'system'
+              && incoming().receiverId == peerOf(chatId)
               && incoming().status == 'sent'
-              && !hasBlocked(incoming().receiverId, me())
-              && !hasBlocked(me(), incoming().receiverId))
+              && !('readBy' in incoming())
+              && neitherBlocked(me(), incoming().receiverId))
             ||
-            (!isDirectId(chatId)
+            (isGroupId(chatId)
               && !('receiverId' in incoming())
-              && (!chatAfter(chatId).get('onlyAdminsCanSend', false)
-                  || me() in chatAfter(chatId).admins
-                  || incoming().type == 'system'))
+              && !('status' in incoming())
+              && incoming().get('readBy', []).size() == 0
+              && (incoming().type == 'system'
+                  || !chatAfter(chatId).get('onlyAdminsCanSend', false)
+                  || me() in chatAfter(chatId).admins))
           );
 
         allow update: if isMember(chatId) && (
@@ -258,7 +371,7 @@ service cloud.firestore {
             && incoming().status in ['delivered', 'read'])
           ||
           // group member marks as read
-          (!isDirectId(chatId) && me() != existing().senderId
+          (isGroupId(chatId) && me() != existing().senderId
             && changed().hasOnly(['readBy'])
             && incoming().readBy.toSet() == existing().get('readBy', []).toSet().union([me()].toSet()))
           ||
@@ -271,7 +384,7 @@ service cloud.firestore {
             && request.time < existing().createdAt + duration.value(2, 'd'))
           ||
           // sender deletes for everyone
-          (me() == existing().senderId
+          (me() == existing().senderId && existing().type != 'system'
             && changed().hasOnly(['deleted', 'deletedAt', 'text', 'attachment', 'replyTo'])
             && incoming().deleted == true
             && incoming().get('text', '') == ''
@@ -290,16 +403,25 @@ service cloud.firestore {
       match /blobs/{blobId} {
         allow read: if isMember(chatId);
         allow create: if isMemberAfter(chatId)
+          && (!isDirectId(chatId) || neitherBlocked(me(), peerOf(chatId)))
           && incoming().keys().hasOnly(['senderId', 'data', 'mime', 'size', 'createdAt'])
           && incoming().senderId == me()
           && isStr(incoming().data, 1, 950000)
-          && isStr(incoming().mime, 3, 100);
+          && incoming().mime is string
+          && incoming().mime.matches('^(image|audio|video)/[a-z0-9.+-]{1,60}$')
+          && incoming().mime != 'image/svg+xml'
+          && incoming().size is int && incoming().size > 0 && incoming().size <= 712500;
         allow update: if false;
         allow delete: if signedIn() && (existing().senderId == me() || isGroupAdmin(chatId));
       }
     }
 
     // ---------- calls (WebRTC signaling) ----------
+    function validSdp(d) {
+      return d is map && d.keys().hasOnly(['sdp', 'type']) && isStr(d.sdp, 1, 100000)
+        && d.type in ['offer', 'answer'];
+    }
+
     match /calls/{callId} {
       allow get: if signedIn() && me() in existing().members;
       allow list: if signedIn() && (existing().calleeId == me() || existing().callerId == me());
@@ -308,11 +430,14 @@ service cloud.firestore {
         && incoming().keys().hasOnly(['callerId', 'calleeId', 'members', 'type', 'status',
                                       'offer', 'offerVersion', 'createdAt', 'updatedAt'])
         && incoming().callerId == me()
+        && isStr(incoming().calleeId, 1, 128)
         && incoming().calleeId != me()
         && incoming().members == [incoming().callerId, incoming().calleeId]
         && incoming().type in ['audio', 'video']
         && incoming().status == 'ringing'
-        && !hasBlocked(incoming().calleeId, me());
+        && (!('offer' in incoming()) || validSdp(incoming().offer))
+        && userExists(incoming().calleeId)
+        && neitherBlocked(me(), incoming().calleeId);
 
       allow update: if signedIn() && me() in existing().members
         && incoming().members == existing().members
@@ -321,8 +446,8 @@ service cloud.firestore {
         && incoming().type == existing().type
         && changed().hasOnly(['status', 'offer', 'offerVersion', 'answer', 'answerVersion',
                               'answeredAt', 'endedAt', 'endedBy', 'updatedAt'])
-        && (!('offer' in changed()) || me() == existing().callerId)
-        && (!('answer' in changed()) || me() == existing().calleeId)
+        && (!('offer' in changed()) || (me() == existing().callerId && validSdp(incoming().offer)))
+        && (!('answer' in changed()) || (me() == existing().calleeId && validSdp(incoming().answer)))
         && incoming().status in ['ringing', 'accepted', 'rejected', 'ended', 'missed', 'cancelled', 'busy'];
 
       allow delete: if false;
@@ -332,7 +457,8 @@ service cloud.firestore {
         allow read: if signedIn() && me() in call().members;
         allow create: if signedIn() && me() in call().members
           && incoming().keys().hasOnly(['from', 'candidate', 'sdpMid', 'sdpMLineIndex', 'createdAt'])
-          && incoming().from == me();
+          && incoming().from == me()
+          && isStr(incoming().get('candidate', ''), 0, 2000);
         allow update, delete: if false;
       }
     }

@@ -203,6 +203,11 @@ else:
                       "write would be refused with permission-denied. Fix the secret, or change .firebaserc if "
                       "you really moved to another project.")
 
+    if values["TURN_USERNAME"] or values["TURN_CREDENTIAL"]:
+        errors.append("TURN_USERNAME / TURN_CREDENTIAL are set. Static TURN passwords would be built into "
+                      "the APK and the web app, where anyone can extract and abuse them. Remove these two "
+                      "secrets and use the turnCredentials Cloud Function (short-lived credentials, "
+                      "functions/index.js).")
     if errors:
         for e in errors:
             note("error", "Firebase settings", e)

@@ -17,3 +17,11 @@ firebase_defines.json
 *.keystore
 *.jks
 key.properties
+
+# Signing material must never be committed (docs/RELEASE_SIGNING.md)
+*.p12
+*.pk8
+*.pepk
+aduchat-upload*
+aduchat-test.keystore*
+*.base64.txt

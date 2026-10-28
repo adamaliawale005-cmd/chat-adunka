@@ -7,6 +7,8 @@ the same REST endpoints the apps use that:
   - the published security rules are the current version,
   - A and B can create profiles and exchange messages in a chat,
   - C cannot read their chat or their private data,
+  - the 2026-10-27 protections are live (no outsider posts, no forged
+    admin events, no directory dump, no username squatting),
 then deletes every document and all three accounts again. Real users'
 data is never read. Credentials come from the environment and are never
 printed.
@@ -95,8 +97,9 @@ def main():
     c, tc, _ = account("c")
     check("Second and third accounts registered", bool(b and c))
 
-    s, body = call("GET", f"{DB}/rulesVersion/2026-10-25", token=ta)
-    check("Published security rules are current", s in (200, 404),
+    s, body = call("GET", f"{DB}/rulesVersion/2026-10-27", token=ta)
+    rules_current = s in (200, 404)
+    check("Published security rules are current", rules_current,
           f"HTTP {s}: publish firestore.rules (firebase deploy --only firestore:rules)")
 
     for uid, tok, name in ((a, ta, "CI Test A"), (b, tb, "CI Test B")):
@@ -122,7 +125,7 @@ def main():
     for tok, uid, text in ((ta, a, "Salaan from A"), (tb, b, "مرحبا from B")):
         mid = secrets.token_hex(8)
         s, body = write(tok, f"chats/{chat}/messages/{mid}",
-                        {"senderId": uid, "type": "text", "text": text, "status": "sent", "readBy": [uid]},
+                        {"senderId": uid, "type": "text", "text": text, "readBy": []},
                         ("createdAt", "clientCreatedAt"))
         msgs.append(mid)
         cleanup.append(("doc", ta, f"chats/{chat}/messages/{mid}"))
@@ -138,6 +141,31 @@ def main():
     check("Outsider cannot read the conversation", s == 403, f"HTTP {s}")
     s, _ = call("GET", f"{DB}/chats/{chat}", token=tc)
     check("Outsider cannot read the chat", s == 403, f"HTTP {s}")
+
+    # Protections added with the 2026-10-27 rules. Every write below must be
+    # refused, so nothing is stored and nothing needs cleaning up.
+    s, body = write(tc, f"chats/{chat}/messages/{secrets.token_hex(8)}",
+                    {"senderId": c, "type": "text", "text": "intruder", "readBy": []},
+                    ("createdAt", "clientCreatedAt"))
+    check("Outsider cannot post into the group", s == 403, f"HTTP {s}")
+    forged = secrets.token_hex(8)
+    s, body = write(tb, f"chats/{chat}/messages/{forged}",
+                    {"senderId": b, "type": "system", "text": f"admin_added:{b}", "readBy": []},
+                    ("createdAt", "clientCreatedAt"))
+    if s == 200:  # older rules: remove it again
+        cleanup.append(("doc", ta, f"chats/{chat}/messages/{forged}"))
+    check("A member cannot forge an admin event", s == 403, f"HTTP {s}")
+    # Only with the new rules: older rules would answer this query with real
+    # users' directory entries, and this check never reads real users' data.
+    if rules_current:
+        s, body = call("POST", f"{DB}:runQuery",
+                       {"structuredQuery": {"from": [{"collectionId": "directory"}]}}, tc)
+        check("The user directory cannot be downloaded in one query", s == 403, f"HTTP {s}")
+    squat = f"ci{secrets.token_hex(6)}"
+    s, body = write(tc, f"usernames/{squat}", {"uid": c}, ("createdAt",))
+    if s == 200:  # older rules: release it again
+        cleanup.append(("doc", tc, f"usernames/{squat}"))
+    check("Usernames cannot be reserved without a profile", s == 403, f"HTTP {s}")
     return 0
 
 

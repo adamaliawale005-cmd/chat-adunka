@@ -23,7 +23,7 @@ class ProfileSaveException implements Exception {
 }
 
 /// Version of firestore.rules this app expects (see rulesVersion in the rules).
-const expectedRulesVersion = '2026-10-25';
+const expectedRulesVersion = '2026-10-27';
 
 /// Profiles, usernames, privacy settings, presence, blocking, reports and
 /// account deletion.

@@ -172,7 +172,7 @@ describe('profile creation with the current firestore.rules', () => {
 
   test('the rules version probe answers for the current version only', async () => {
     const d = ctx(env, emailUser);
-    await getDoc(doc(d, 'rulesVersion', '2026-10-25'));
+    await getDoc(doc(d, 'rulesVersion', '2026-10-27'));
     await assert.rejects(getDoc(doc(d, 'rulesVersion', 'old')), /permission/i);
   });
 
